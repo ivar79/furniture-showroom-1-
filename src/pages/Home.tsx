@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Product, Category } from "../types";
 import ProductCard from "../components/ProductCard";
-import { ArrowLeft, Sparkles, Sofa, Shield, Compass, BadgeCheck, PhoneCall, ChevronLeft } from "lucide-react";
+import { ArrowLeft, Sparkles, Sofa, Shield, Compass, BadgeCheck, PhoneCall, ChevronLeft, Percent, Scale, Layers, ShieldCheck } from "lucide-react";
 import { motion } from "motion/react";
 
 export default function Home() {
@@ -105,36 +105,58 @@ export default function Home() {
       </section>
 
       {/* 2. Top Brands Tagline / Why furniture-showroom */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 sm:mt-24">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 sm:mt-24 text-right">
+        <div className="text-center max-w-2xl mx-auto mb-12 space-y-2">
+          <span className="text-xs bg-amber-100 text-stone-900 px-3 py-1 rounded-full font-extrabold border border-amber-200">
+            مزایای انحصاری ثبت سفارش در مدرن هوم
+          </span>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-stone-900 leading-tight">
+            چرا نباید فیزیکی و مستقیم از نمایشگاه‌ها خرید کنیم؟
+          </h2>
+          <p className="text-stone-400 text-xs font-light leading-relaxed">
+            مراجعه مستقیم بدلیل عدم نظارت پلتفرم معمولاً منجر به از دست رفتن تخفیف‌ها، تأخیر در تحویل بدون عودت جریمه و یا افت ناخواسته کیفیت متریال ساخت (اسفنج و کلاف) می‌شود.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           
-          <div className="flex gap-4 p-6 bg-white border border-stone-200/50 rounded-3xl">
-            <div className="w-12 h-12 bg-stone-100 text-stone-900 flex items-center justify-center shrink-0 rounded-2xl">
-              <Compass className="w-6 h-6" />
+          <div className="flex flex-col gap-3 p-6 bg-white border border-stone-200/50 rounded-3xl text-right">
+            <div className="w-11 h-11 bg-amber-100/50 text-stone-900 flex items-center justify-center shrink-0 rounded-2xl mx-auto md:mx-0">
+              <Percent className="w-5 h-5 text-amber-900" />
             </div>
             <div className="space-y-1.5">
-              <h3 className="text-sm font-bold text-stone-900">قیمت مستقیم نمایشگاهی</h3>
-              <p className="text-xs text-stone-400 leading-relaxed">ما با نمایشگاه مچ می‌شویم و قیمت‌های توافق شده تولید اولیه را با نظارت بر کیفیت به شما تقدیم می‌کنیم.</p>
+              <h3 className="text-sm font-bold text-stone-900">۵٪ تخفیف انحصاری پلتفرم</h3>
+              <p className="text-xs text-stone-400 leading-relaxed font-light">بواسطه قراردادهای کلان، رقم مندرج در فاکتور شما ۵٪ ارزان‌تر از خرید حضوری و فیزیکی از همان نمایشگاه خواهد بود.</p>
             </div>
           </div>
 
-          <div className="flex gap-4 p-6 bg-white border border-stone-200/50 rounded-3xl">
-            <div className="w-12 h-12 bg-stone-100 text-stone-900 flex items-center justify-center shrink-0 rounded-2xl">
-              <Shield className="w-6 h-6" />
+          <div className="flex flex-col gap-3 p-6 bg-white border border-stone-200/50 rounded-3xl text-right">
+            <div className="w-11 h-11 bg-amber-100/50 text-stone-900 flex items-center justify-center shrink-0 rounded-2xl mx-auto md:mx-0">
+              <Layers className="w-5 h-5 text-amber-900" />
             </div>
             <div className="space-y-1.5">
-              <h3 className="text-sm font-bold text-stone-900">ضمانت اصالت و سلامت مبل</h3>
-              <p className="text-xs text-stone-400 leading-relaxed">قبل از بارگیری، کارشناسان ما کیفیت چوب، کلاف، پارچه و اسفنج یورتان را شخصاً تأیید می‌کنند.</p>
+              <h3 className="text-sm font-bold text-stone-900">QC و کارشناسی متریال در کارگاه</h3>
+              <p className="text-xs text-stone-400 leading-relaxed font-light">ناظران فنی ما فیزیکاً ساختار مبل (چوب روس، کلاف و اسفنج ۳۵ کیلویی تایید شده) را پیش از خروج بررسی و پلمپ می‌کنند.</p>
             </div>
           </div>
 
-          <div className="flex gap-4 p-6 bg-white border border-stone-200/50 rounded-3xl">
-            <div className="w-12 h-12 bg-stone-100 text-stone-900 flex items-center justify-center shrink-0 rounded-2xl">
-              <PhoneCall className="w-6 h-6" />
+          <div className="flex flex-col gap-3 p-6 bg-white border border-stone-200/50 rounded-3xl text-right">
+            <div className="w-11 h-11 bg-amber-100/50 text-stone-900 flex items-center justify-center shrink-0 rounded-2xl mx-auto md:mx-0">
+              <Sparkles className="w-5 h-5 text-amber-900" />
             </div>
             <div className="space-y-1.5">
-              <h3 className="text-sm font-bold text-stone-900">مشاوره رایگان تخصصی</h3>
-              <p className="text-xs text-stone-400 leading-relaxed">کاندید کردن مبل، ارسال رنگ‌بندی‌های تکمیلی و مشاوره ابعاد دکوراسیون توسط دیزاینرهای ما انجام می‌شود.</p>
+              <h3 className="text-sm font-bold text-stone-900">مشاوره دکوراسیون و رندر ۳بعدی</h3>
+              <p className="text-xs text-stone-400 leading-relaxed font-light">رنگ‌بندی پارچه و ابعاد دقیق مبل کاندید شده را به صورت کاملاً رایگان با دکوراسیون و والپیپر منزل شما مطابقت می‌دهیم.</p>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3 p-6 bg-white border border-stone-200/50 rounded-3xl text-right">
+            <div className="w-11 h-11 bg-amber-100/50 text-stone-900 flex items-center justify-center shrink-0 rounded-2xl mx-auto md:mx-0">
+              <Scale className="w-5 h-5 text-amber-900" />
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="text-sm font-bold text-stone-900">حمایت حقوقی و جریمه زمان تحویل</h3>
+              <p className="text-xs text-stone-400 leading-relaxed font-light">پلتفرم از طرف شما به عنوان خریدار، حکم رسمی قرار داده و در صورت تاخیر نمایشگاه، جریمه روزشمار کتبی عودت می‌دهد.</p>
             </div>
           </div>
 

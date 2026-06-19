@@ -34,6 +34,82 @@ export default function AdminProducts() {
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState("");
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    await uploadSelectedFiles(files);
+  };
+
+  const uploadSelectedFiles = async (files: FileList) => {
+    setUploading(true);
+    setUploadProgress("درحال بارگذاری...");
+
+    const uploadedUrls: string[] = [];
+    
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setUploadProgress(`درحال آپلود تصویر ${i + 1} از ${files.length}...`);
+
+        // Read file as base64
+        const base64Data = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = (err) => reject(err);
+          reader.readAsDataURL(file);
+        });
+
+        // Post to backend upload endpoint
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image: base64Data, name: file.name }),
+        });
+
+        const data = await res.json();
+        if (data.success && data.url) {
+          uploadedUrls.push(data.url);
+        } else {
+          console.error("Upload error response:", data.error);
+        }
+      }
+
+      if (uploadedUrls.length > 0) {
+        // Append to existing images state
+        const currentList = images.split(",").map(item => item.trim()).filter(Boolean);
+        const newList = [...currentList, ...uploadedUrls].join(", ");
+        setImages(newList);
+      }
+    } catch (err) {
+      console.error("Upload failed:", err);
+      alert("خطا در بارگذاری تصاویر. لطفاً دوباره تلاش کنید.");
+    } finally {
+      setUploading(false);
+      setUploadProgress("");
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      await uploadSelectedFiles(files);
+    }
+  };
+
+  const removeImageAt = (indexToRemove: number) => {
+    const currentList = images.split(",").map(item => item.trim()).filter(Boolean);
+    const filteredList = currentList.filter((_, idx) => idx !== indexToRemove);
+    setImages(filteredList.join(", "));
+  };
+
   const fetchData = async () => {
     try {
       const prodRes = await fetch("/api/products");
@@ -311,17 +387,99 @@ export default function AdminProducts() {
 
             </div>
 
-            {/* Images stage URLs */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-stone-600">نشانی آدرس تصاویر مبل (با کاما جدا کنید)</label>
-              <textarea
-                rows={2}
-                placeholder="https://images.unsplash.com/photo-1555041469-a586c61ea9bc , https://images.unsplash.com/photo-1484101403633-562f891dc89a"
-                value={images}
-                onChange={(e) => setImages(e.target.value)}
-                className="w-full text-left bg-stone-50 border border-stone-200 rounded-xl py-2 px-4 text-xs text-stone-900 focus:outline-none resize-none font-mono"
-                dir="ltr"
-              />
+            {/* Images stage URLs & Live File Uploader */}
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <label className="text-xs font-bold text-stone-600">نشانی آدرس تصاویر مبل</label>
+                <span className="text-[10px] text-stone-400">امکان انتخاب و آپلود مستقیم کاتالوگ یا درج آدرس اینترنتی</span>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Textarea for manual access & fine tuning */}
+                <div className="md:col-span-2 space-y-1">
+                  <span className="text-[10px] font-semibold text-stone-500 block">آدرس‌های مستقیم اینترنتی (با ویرگول انگلیسی , جدا کنید):</span>
+                  <textarea
+                    rows={4}
+                    placeholder="https://images.unsplash.com/photo-1555041469-a586c61ea9bc"
+                    value={images}
+                    onChange={(e) => setImages(e.target.value)}
+                    className="w-full text-left bg-stone-50 border border-stone-200 rounded-2xl py-3 px-4 text-xs text-stone-900 focus:outline-none resize-none font-mono focus:ring-1 focus:ring-stone-400 focus:bg-white transition-all text-[11px]"
+                    dir="ltr"
+                  />
+                </div>
+
+                {/* WhatsApp/Telegram drag-and-drop uploader */}
+                <div 
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                  className="border-2 border-dashed border-stone-300 hover:border-stone-500 bg-stone-50/50 hover:bg-stone-50/80 rounded-2xl p-5 flex flex-col items-center justify-center text-center cursor-pointer relative group transition-all duration-200 min-h-[120px]"
+                >
+                  <input
+                    type="file"
+                    id="file-upload-input"
+                    multiple
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                  <label htmlFor="file-upload-input" className="w-full h-full flex flex-col items-center justify-center cursor-pointer select-none">
+                    {uploading ? (
+                      <div className="space-y-2">
+                        <div className="w-7 h-7 border-4 border-stone-800 border-t-transparent rounded-full animate-spin mx-auto" />
+                        <span className="text-xs font-bold text-stone-700 block">{uploadProgress}</span>
+                        <span className="text-[9px] text-stone-400 block pb-1">لطفاً صبور باشید...</span>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 py-1">
+                        <div className="bg-white p-2.5 rounded-full shadow-sm group-hover:scale-105 transition-all text-stone-600 group-hover:text-stone-800 border border-stone-100 mx-auto w-11 h-11 flex items-center justify-center">
+                          <Image className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <span className="text-xs font-bold text-stone-800 block">انتخاب و آپلود عکس‌ها</span>
+                          <span className="text-[9px] text-stone-400 mt-1 block">فایل‌ها را بکشید و این‌جا رها کنید</span>
+                        </div>
+                        <span className="inline-block bg-stone-950 text-white text-[9px] font-bold px-2.5 py-1 rounded-lg mt-1 group-hover:bg-stone-800 transition-all">
+                          یا جستجوی فایل
+                        </span>
+                      </div>
+                    )}
+                  </label>
+                </div>
+              </div>
+
+              {/* Live Thumbnails Manager */}
+              {images.split(",").map(i => i.trim()).filter(Boolean).length > 0 && (
+                <div className="bg-stone-50 border border-stone-100 p-4 rounded-2xl">
+                  <span className="text-[10px] font-extrabold text-stone-500 block mb-3">پیش‌نمایش و مدیریت آنلاین تصاویر گالری ({images.split(",").map(i => i.trim()).filter(Boolean).length} عدد):</span>
+                  <div className="flex flex-wrap gap-3">
+                    {images.split(",").map(i => i.trim()).filter(Boolean).map((url, index) => (
+                      <div key={index} className="relative w-20 h-20 rounded-xl overflow-hidden border border-stone-200 bg-stone-200 group flex items-center justify-center shadow-xs">
+                        <img 
+                          src={url} 
+                          alt={`Furniture preview ${index + 1}`} 
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            (e.target as HTMLElement).style.display = 'none';
+                          }}
+                        />
+                        {/* Remove button */}
+                        <button
+                          type="button"
+                          onClick={() => removeImageAt(index)}
+                          className="absolute -top-1 -right-1 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full shadow-md transition-all scale-90 hover:scale-105"
+                          title="حذف تصویر"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                        <div className="absolute bottom-0 inset-x-0 bg-black/60 text-[8px] text-white py-0.5 text-center truncate px-1 font-sans">
+                          تصویر {index + 1}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Spec Tables details */}

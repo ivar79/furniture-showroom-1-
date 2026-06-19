@@ -150,3 +150,15 @@ export const siteSettings = pgTable('site_settings', {
   value: text('value').notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
+
+// Social Login Connections mapped to Customer Club profiles (Phones)
+export const customerConnections = pgTable('customer_connections', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  provider: text('provider').notNull(), // 'google', 'apple', 'github'
+  providerId: text('provider_id').notNull(), // Unified user ID
+  email: text('email'),
+  name: text('name'),
+  phone: text('phone'), // Handshake map to store orders of this buyer
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});

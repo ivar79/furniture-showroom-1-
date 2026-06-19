@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Product, Showroom, Category } from "../types";
-import { ArrowRight, CheckCircle2, Store, Calendar, HelpCircle, PhoneCall, Heart, Star, Sparkles, MapPin, ShieldAlert, BadgeInfo } from "lucide-react";
+import { ArrowRight, CheckCircle2, Store, Calendar, HelpCircle, PhoneCall, Heart, Star, Sparkles, MapPin, ShieldAlert, BadgeInfo, ShieldCheck, Scale, Percent, Layers } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 export default function ProductDetail() {
@@ -21,6 +21,13 @@ export default function ProductDetail() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
+
+    // Capture referral code if present in url query
+    const searchParams = new URLSearchParams(window.location.search);
+    const refParam = searchParams.get("ref");
+    if (refParam) {
+      localStorage.setItem("m_referrer", refParam.trim());
+    }
 
     const fetchDetail = async () => {
       try {
@@ -65,6 +72,13 @@ export default function ProductDetail() {
       return;
     }
 
+    // Append optional referral code if present in localStorage
+    let finalMessage = customerMessage;
+    const storedReferrer = localStorage.getItem("m_referrer");
+    if (storedReferrer) {
+      finalMessage = `${customerMessage ? customerMessage + "\n" : ""}[کد معرف: ${storedReferrer}]`;
+    }
+
     try {
       const res = await fetch("/api/orders", {
         method: "POST",
@@ -73,7 +87,7 @@ export default function ProductDetail() {
           customerName,
           customerPhone,
           customerCity,
-          customerMessage,
+          customerMessage: finalMessage,
           productId: data?.product.id,
         })
       });
@@ -219,6 +233,70 @@ export default function ProductDetail() {
               )}
             </div>
 
+            {/* Platform Exclusive Protections & Anti-bypass Info */}
+            <div className="bg-stone-900 text-stone-100 p-6 sm:p-8 rounded-3xl space-y-6 border border-stone-800">
+              <div className="space-y-1.5 text-right">
+                <span className="text-[10px] bg-amber-400 text-stone-950 font-extrabold px-2.5 py-1 rounded-md inline-block uppercase tracking-wider">
+                  بسته طلایی خرید مشتری
+                </span>
+                <h3 className="text-base sm:text-lg font-extrabold text-stone-100 flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-amber-400 shrink-0" />
+                  چرا ثبت از سایت؟ چرا مستقیم خرید نکنیم؟
+                </h3>
+                <p className="text-stone-400 text-xs font-light leading-relaxed">
+                  مراجعه مستقیم بدلیل عدم نظارت پلتفرم مدرن هوم معمولاً منجر به از دست رفتن تخفیف‌ها، تحویل دیرهنگام بدون امکان پیگیری قانونی و یا استفاده ناخواسته از متریال با کیفیت پایین‌تر (اسفنج متفرقه بجای یورتان ۳۵ کیلویی) می‌شود.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                
+                {/* Perk 1: Discount */}
+                <div className="bg-stone-800/40 border border-stone-800/60 p-4 rounded-2xl space-y-2 text-right">
+                  <div className="w-8 h-8 rounded-xl bg-amber-400/10 flex items-center justify-center text-amber-400">
+                    <Percent className="w-4 h-4" />
+                  </div>
+                  <h4 className="text-xs font-extrabold text-stone-100">۵٪ تخفیف انحصاری پلتفرم</h4>
+                  <p className="text-[11px] text-stone-400 leading-relaxed font-light">
+                    فاکتور نهایی شما در سراسر کشور ۵٪ ارزان‌تر از قیمت مراجعه حضوری و مستقیم به فیزیک نمایشگاه صادر خواهد شد.
+                  </p>
+                </div>
+
+                {/* Perk 2: Workshop QC Inspection */}
+                <div className="bg-stone-800/40 border border-stone-800/60 p-4 rounded-2xl space-y-2 text-right">
+                  <div className="w-8 h-8 rounded-xl bg-amber-400/10 flex items-center justify-center text-amber-400">
+                    <Layers className="w-4 h-4" />
+                  </div>
+                  <h4 className="text-xs font-extrabold text-stone-100">کارشناسی مهندسی متریال مبل</h4>
+                  <p className="text-[11px] text-stone-400 leading-relaxed font-light">
+                    ناظران فنی ما دانسیته واقعی اسفنج ۳۵ کیلویی و کیفیت الوار چوبی کارگاه را پیش از بارگیری فیزیکی تایید می‌کنند.
+                  </p>
+                </div>
+
+                {/* Perk 3: 3D Consultation */}
+                <div className="bg-stone-800/40 border border-stone-800/60 p-4 rounded-2xl space-y-2 text-right">
+                  <div className="w-8 h-8 rounded-xl bg-amber-400/10 flex items-center justify-center text-amber-400">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <h4 className="text-xs font-extrabold text-stone-100">مشاوره ۳بعدی چیدمان و پارچه</h4>
+                  <p className="text-[11px] text-stone-400 leading-relaxed font-light">
+                    انطباق علمی طیف رنگی کالیته با والپیپر و مبلمان قبلی شما با رندر ۳بعدی دکوراسیون پلتفرم ما به صورت ۱۰۰٪ رایگان.
+                  </p>
+                </div>
+
+                {/* Perk 4: Legal & Penalty Protection */}
+                <div className="bg-stone-800/40 border border-stone-800/60 p-4 rounded-2xl space-y-2 text-right">
+                  <div className="w-8 h-8 rounded-xl bg-amber-400/10 flex items-center justify-center text-amber-400">
+                    <Scale className="w-4 h-4" />
+                  </div>
+                  <h4 className="text-xs font-extrabold text-stone-100">حمایت حقوقی و جریمه دیرکرد</h4>
+                  <p className="text-[11px] text-stone-400 leading-relaxed font-light">
+                    پلتفرم، زمان تحویل نمایشگاه را گارانتی می‌کند؛ به ازای هر روز تاخیر، جریمه روزشمار کسر و به خریدار بازپرداخت می‌شود.
+                  </p>
+                </div>
+
+              </div>
+            </div>
+
           </div>
 
           {/* Column 2: Order Lead Form & Showroom Details */}
@@ -239,12 +317,26 @@ export default function ProductDetail() {
 
               <div className="h-px bg-stone-100" />
 
-              {/* Price Row */}
-              <div className="flex justify-between items-center pt-2">
-                <span className="text-xs font-bold text-stone-400">قیمت پایه همکاری نمایشگاه</span>
-                <span className="text-xl sm:text-2xl font-extrabold text-stone-900">
-                  {new Intl.NumberFormat("fa-IR").format(product.basePrice)} <span className="text-sm font-sans">تومان</span>
-                </span>
+              {/* Price Row / Dynamic Anti-Bypass Comparison */}
+              <div className="space-y-3.5 pt-2">
+                <div className="flex justify-between items-center text-xs text-stone-400 font-semibold line-through">
+                  <span>خرید آزاد و مستقیم از فیزیک نمایشگاه:</span>
+                  <span>
+                    {new Intl.NumberFormat("fa-IR").format(Math.round(product.basePrice * 1.05 / 50000) * 50000)} <span className="text-[10px]">تومان</span>
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center p-3.5 bg-stone-50 border border-stone-100 rounded-2xl">
+                  <div className="space-y-0.5">
+                    <span className="text-[10px] bg-amber-100 text-stone-900 border border-amber-200 px-2 py-0.5 rounded-lg font-extrabold inline-block leading-none mb-1">
+                      ۵٪ تخفیف نقدی پلتفرم
+                    </span>
+                    <span className="text-xs font-extrabold text-stone-900 block">قیمت نهایی با ثبت از طریق سایت:</span>
+                  </div>
+                  <span className="text-xl sm:text-2xl font-extrabold text-stone-900">
+                    {new Intl.NumberFormat("fa-IR").format(product.basePrice)} <span className="text-xs font-sans">تومان</span>
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -368,10 +460,10 @@ export default function ProductDetail() {
                   className="bg-stone-800/40 border border-stone-700 p-6 rounded-2xl text-center space-y-4"
                 >
                   <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto" />
-                  <h4 className="text-sm font-extrabold text-stone-50">درخواست شما با موفقیت ثبت شد</h4>
+                  <h4 className="text-sm font-extrabold text-stone-50">بسته طلایی و تخفیف ۵٪ شما رزرو شد!</h4>
                   <p className="text-stone-300 text-xs font-light leading-relaxed">
-                    با تشکر از اعتماد شما به پلتفرم واسطه‌گری <span className="font-semibold text-stone-50">furniture-showroom</span>.<br />
-                    کارشناسان مجرب ما ظرف ۲۴ ساعت آینده جهت هماهنگی قیمت، ابعاد ساخت و رنگ‌بندی کالیته‌ها با شماره‌ی <span className="font-bold underline text-stone-100">{customerPhone}</span> تماس خواهند گرفت.
+                    با تشکر از ثبت هوشمندانه درخواست در پلتفرم واسطه‌گری <span className="font-semibold text-stone-50">مدرن هوم</span>.<br />
+                    تخفیف انحصاری ۵٪، بن مشاوره دکوراسیون و گارانتی کاربری مهندسی متریال مبل برای شماره‌ی <span className="font-bold underline text-stone-100">{customerPhone}</span> قفل شد. کارشناسان ما ظرف ۲۴ ساعت آینده با شما تماس خواهند گرفت.
                   </p>
                   <button
                     onClick={() => setFormSuccess(false)}

@@ -1,12 +1,13 @@
 import express from "express";
 import path from "path";
+import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import bcryptjs from "bcryptjs";
 import { getDb } from "./src/db/index";
 import { runSeed } from "./src/db/seed";
 import * as schema from "./src/db/schema";
-import { eq, and, desc, sql, inArray } from "drizzle-orm";
+import { eq, and, desc, sql, inArray, like } from "drizzle-orm";
 
 dotenv.config();
 
@@ -26,7 +27,56 @@ initializeApp();
 const app = express();
 const PORT = 3000;
 
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+// Serve custom uploaded files statically 
+const uploadsDir = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+app.use("/uploads", express.static(uploadsDir));
+
+// Robust Base64 dynamic local upload endpoint
+app.post("/api/upload", async (req, res) => {
+  try {
+    const { image, name } = req.body;
+    if (!image) {
+      return res.status(400).json({ success: false, error: "تصویری ارسال نشده است." });
+    }
+
+    const matches = image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) {
+      return res.status(400).json({ success: false, error: "فرمت تصویر ارسالی معتبر نیست." });
+    }
+
+    const fileType = matches[1];
+    const base64Data = matches[2];
+    const buffer = Buffer.from(base64Data, "base64");
+
+    let extension = "png";
+    if (fileType.includes("jpeg") || fileType.includes("jpg")) {
+      extension = "jpg";
+    } else if (fileType.includes("gif")) {
+      extension = "gif";
+    } else if (fileType.includes("webp")) {
+      extension = "webp";
+    } else if (fileType.includes("svg")) {
+      extension = "svg";
+    }
+
+    const filename = `${Date.now()}-${Math.floor(Math.random() * 1000000)}.${extension}`;
+    const filePath = path.join(uploadsDir, filename);
+
+    await fs.promises.writeFile(filePath, buffer);
+
+    const fileUrl = `/uploads/${filename}`;
+    return res.json({ success: true, url: fileUrl });
+  } catch (error: any) {
+    console.error("Local file upload error on backend:", error);
+    return res.status(500).json({ success: false, error: "خطا در بارگذاری و ذخیره تصویر." });
+  }
+});
 
 // Simplistic robust Tokenless Admin auth endpoint for AI Studio Preview
 app.post("/api/auth/login", async (req, res) => {
@@ -563,7 +613,673 @@ app.put("/api/admin/orders/:id", async (req, res) => {
 
 
 // -----------------------------------------------------------------------------
+// CUSTOMER & VIP CLUB ENDPOINTS
+// -----------------------------------------------------------------------------
+app.get("/api/admin/customers", async (req, res) => {
+  try {
+    const db = getDb();
+    const allOrders = await db.select().from(schema.orders);
+    
+    // Fetch VIP settings list
+    const vipPhonesSetting = await db.select()
+      .from(schema.siteSettings)
+      .where(eq(schema.siteSettings.key, "vip_phones"))
+      .limit(1);
+    const vipPhones: string[] = vipPhonesSetting.length > 0 
+      ? JSON.parse(vipPhonesSetting[0].value) 
+      : [];
+
+    const thresholdSetting = await db.select()
+      .from(schema.siteSettings)
+      .where(eq(schema.siteSettings.key, "vip_threshold"))
+      .limit(1);
+    const vipThreshold = thresholdSetting.length > 0 
+      ? parseInt(thresholdSetting[0].value) 
+      : 50 * 1000 * 1000; // 50 million tomans default representation
+
+    // Group orders by customer_phone
+    const customerMap = new Map<string, {
+      phone: string;
+      name: string;
+      city: string;
+      totalOrders: number;
+      totalSpent: number;
+      latestOrderDate: string;
+      isManualVip: boolean;
+      autoEligible: boolean;
+    }>();
+
+    for (const order of allOrders) {
+      const phone = order.customerPhone.trim();
+      if (!phone) continue;
+      const existing = customerMap.get(phone);
+      
+      const orderPrice = order.agreedPrice || 0;
+      // count spent if CONFIRMED or DELIVERED, or count all inquiries as potential
+      const isConfirmedPurchase = ["CONFIRMED", "DELIVERED"].includes(order.status);
+      const spentToAdd = isConfirmedPurchase ? orderPrice : 0;
+
+      if (existing) {
+        existing.totalOrders += 1;
+        existing.totalSpent += spentToAdd;
+        if (new Date(order.createdAt) > new Date(existing.latestOrderDate)) {
+          existing.latestOrderDate = order.createdAt.toISOString();
+          existing.name = order.customerName; // update to latest name
+          existing.city = order.customerCity;
+        }
+      } else {
+        customerMap.set(phone, {
+          phone,
+          name: order.customerName,
+          city: order.customerCity,
+          totalOrders: 1,
+          totalSpent: spentToAdd,
+          latestOrderDate: order.createdAt ? new Date(order.createdAt).toISOString() : new Date().toISOString(),
+          isManualVip: vipPhones.includes(phone),
+          autoEligible: false, // will check below
+        });
+      }
+    }
+
+    const customersList = Array.from(customerMap.values()).map(c => {
+      c.autoEligible = c.totalSpent >= vipThreshold;
+
+      // Look for orders containing `[کد معرف: phone]`
+      const refCode = `[کد معرف: ${c.phone}]`;
+      const referredOrders = allOrders.filter(o => o.customerMessage && o.customerMessage.includes(refCode));
+      const referralsCount = referredOrders.length;
+      const successfulReferrals = referredOrders.filter(o => ["CONFIRMED", "DELIVERED"].includes(o.status)).length;
+      const referralEarning = successfulReferrals * 250000;
+
+      return {
+        ...c,
+        isVip: c.isManualVip || c.autoEligible,
+        referralsCount,
+        successfulReferrals,
+        referralEarning
+      };
+    });
+
+    return res.json({ 
+      success: true, 
+      customers: customersList, 
+      vipThreshold, 
+      vipPhonesCount: vipPhones.length 
+    });
+  } catch (error: any) {
+    console.error("Customers fetch error:", error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post("/api/admin/customers/vip", async (req, res) => {
+  try {
+    const db = getDb();
+    const { phone, isVip } = req.body;
+    if (!phone) {
+      return res.status(400).json({ success: false, error: "شماره تلفن الزامی است." });
+    }
+
+    // Fetch existing vip_phones list
+    const foundSetting = await db.select()
+      .from(schema.siteSettings)
+      .where(eq(schema.siteSettings.key, "vip_phones"))
+      .limit(1);
+
+    let vipPhones: string[] = foundSetting.length > 0 
+      ? JSON.parse(foundSetting[0].value) 
+      : [];
+
+    const cleanPhone = phone.trim();
+    if (isVip) {
+      if (!vipPhones.includes(cleanPhone)) {
+        vipPhones.push(cleanPhone);
+      }
+    } else {
+      vipPhones = vipPhones.filter(p => p !== cleanPhone);
+    }
+
+    const valueStr = JSON.stringify(vipPhones);
+
+    if (foundSetting.length > 0) {
+      await db.update(schema.siteSettings)
+        .set({ value: valueStr, updatedAt: new Date() })
+        .where(eq(schema.siteSettings.key, "vip_phones"));
+    } else {
+      await db.insert(schema.siteSettings).values({
+        key: "vip_phones",
+        value: valueStr,
+        updatedAt: new Date()
+      });
+    }
+
+    return res.json({ success: true, phone: cleanPhone, isVip, vipPhonesCount: vipPhones.length });
+  } catch (error: any) {
+    console.error("VIP status update error:", error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post("/api/admin/customers/vip-threshold", async (req, res) => {
+  try {
+    const db = getDb();
+    const { threshold } = req.body;
+    if (threshold === undefined) {
+      return res.status(400).json({ success: false, error: "مقدار حد نصاب الزامی است" });
+    }
+
+    const foundSetting = await db.select()
+      .from(schema.siteSettings)
+      .where(eq(schema.siteSettings.key, "vip_threshold"))
+      .limit(1);
+
+    const valStr = String(threshold);
+
+    if (foundSetting.length > 0) {
+      await db.update(schema.siteSettings)
+        .set({ value: valStr, updatedAt: new Date() })
+        .where(eq(schema.siteSettings.key, "vip_threshold"));
+    } else {
+      await db.insert(schema.siteSettings).values({
+        key: "vip_threshold",
+        value: valStr,
+        updatedAt: new Date()
+      });
+    }
+
+    return res.json({ success: true, threshold });
+  } catch (error: any) {
+    console.error("VIP threshold update error:", error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
+// In-Memory SMS OTP Storage for Production & Testing Handshakes
+const otpStore = new Map<string, { code: string; expiresAt: number }>();
+
+app.post("/api/customer/send-otp", async (req, res) => {
+  try {
+    const db = getDb();
+    const { phone } = req.body;
+    if (!phone) {
+      return res.status(400).json({ success: false, error: "شماره همراه ارسال نشده است" });
+    }
+    const cleanPhone = phone.trim();
+
+    // Check if phone has any active orders or matches customer list
+    const customerOrders = await db.select()
+      .from(schema.orders)
+      .where(eq(schema.orders.customerPhone, cleanPhone))
+      .limit(1);
+
+    if (customerOrders.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: "شماره همراه شما در سیستم باشگاه مبل یافت نشد. لطفاً شماره‌ای را وارد کنید که در هنگام خرید مبل فاکتور کرده‌اید."
+      });
+    }
+
+    // Generate a 4 digit OTP code
+    const otpCode = Math.floor(1000 + Math.random() * 9000).toString();
+
+    // Store in memory with 3 minutes expiration
+    otpStore.set(cleanPhone, {
+      code: otpCode,
+      expiresAt: Date.now() + 3 * 60 * 1000
+    });
+
+    console.log(`[SMS OTP SIMULATION] SMS Sent to ${cleanPhone}. CODE: ${otpCode}`);
+
+    return res.json({
+      success: true,
+      message: "کد تایید پیامکی با موفقیت ارسال شد.",
+      otpCode // Returning debug code for seamless live preview simulation
+    });
+  } catch (error: any) {
+    console.error("SMS OTP Send error:", error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post("/api/customer/verify-otp", async (req, res) => {
+  try {
+    const db = getDb();
+    const { phone, code } = req.body;
+    if (!phone || !code) {
+      return res.status(400).json({ success: false, error: "شماره همراه یا کد تایید ارسال نشده است" });
+    }
+
+    const cleanPhone = phone.trim();
+    const cleanCode = code.trim();
+
+    const record = otpStore.get(cleanPhone);
+    if (!record) {
+      return res.status(400).json({ success: false, error: "کد تاییدی صادر نشده یا منقضی شده است. لطفا مجدد درخواست پیامکی ارسال کنید." });
+    }
+
+    if (Date.now() > record.expiresAt) {
+      otpStore.delete(cleanPhone);
+      return res.status(400).json({ success: false, error: "کد تایید منقضی شده است. لطفا مجدد درخواست پیامکی ارسال کنید." });
+    }
+
+    if (record.code !== cleanCode) {
+      return res.status(400).json({ success: false, error: "کد تایید وارد شده نادرست است." });
+    }
+
+    // OTP verified successfully! Delete to prevent reuse
+    otpStore.delete(cleanPhone);
+
+    // Prepare full member profile payload
+    const customerOrders = await db.select()
+      .from(schema.orders)
+      .where(eq(schema.orders.customerPhone, cleanPhone))
+      .orderBy(desc(schema.orders.createdAt));
+
+    // Get VIP system settings
+    const vipPhonesSetting = await db.select()
+      .from(schema.siteSettings)
+      .where(eq(schema.siteSettings.key, "vip_phones"))
+      .limit(1);
+    const vipPhones: string[] = vipPhonesSetting.length > 0
+      ? JSON.parse(vipPhonesSetting[0].value)
+      : [];
+
+    const thresholdSetting = await db.select()
+      .from(schema.siteSettings)
+      .where(eq(schema.siteSettings.key, "vip_threshold"))
+      .limit(1);
+    const vipThreshold = thresholdSetting.length > 0
+      ? parseInt(thresholdSetting[0].value)
+      : 50 * 1000 * 1000;
+
+    let totalSpentValue = 0;
+    let mostRecentName = "";
+    let mostRecentCity = "";
+
+    for (const order of customerOrders) {
+      if (!mostRecentName && order.customerName) mostRecentName = order.customerName;
+      if (!mostRecentCity && order.customerCity) mostRecentCity = order.customerCity;
+      if (["CONFIRMED", "DELIVERED"].includes(order.status)) {
+        totalSpentValue += order.agreedPrice || 0;
+      }
+    }
+
+    const isManualVip = vipPhones.includes(cleanPhone);
+    const isAutoVip = totalSpentValue >= vipThreshold;
+    const isVip = isManualVip || isAutoVip;
+
+    const productIds = customerOrders.map(o => o.productId);
+    let resolvedProducts: any[] = [];
+    if (productIds.length > 0) {
+      resolvedProducts = await db.select()
+        .from(schema.products)
+        .where(inArray(schema.products.id, productIds));
+    }
+
+    const ordersWithProducts = customerOrders.map(order => {
+      const prod = resolvedProducts.find(p => p.id === order.productId);
+      return { ...order, product: prod || null };
+    });
+
+    const rewardPoints = Math.floor(totalSpentValue / 1000000);
+
+    const referralOrders = await db.select()
+      .from(schema.orders)
+      .where(like(schema.orders.customerMessage, `%[کد معرف: ${cleanPhone}]%`))
+      .orderBy(desc(schema.orders.createdAt));
+
+    const totalReferrals = referralOrders.length;
+    const successfulReferrals = referralOrders.filter(o => ["CONFIRMED", "DELIVERED"].includes(o.status)).length;
+    const referralEarning = successfulReferrals * 250000;
+
+    return res.json({
+      success: true,
+      customer: {
+        phone: cleanPhone,
+        name: mostRecentName || "خریدار عزیز",
+        city: mostRecentCity,
+        totalOrders: customerOrders.length,
+        totalSpent: totalSpentValue,
+        isVip,
+        rewardPoints,
+        vipThreshold,
+        nextRankRemaining: Math.max(0, vipThreshold - totalSpentValue),
+        totalReferrals,
+        successfulReferrals,
+        referralEarning
+      },
+      orders: ordersWithProducts
+    });
+  } catch (error: any) {
+    console.error("SMS OTP Verify error:", error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
+app.post("/api/customer/portal", async (req, res) => {
+  try {
+    const db = getDb();
+    const { phone } = req.body;
+    if (!phone) {
+      return res.status(400).json({ success: false, error: "وارد کردن شماره همراه الزامی است" });
+    }
+
+    const cleanPhone = phone.trim();
+
+    // Fetch all orders for this buyer phone number
+    const customerOrders = await db.select()
+      .from(schema.orders)
+      .where(eq(schema.orders.customerPhone, cleanPhone))
+      .orderBy(desc(schema.orders.createdAt));
+
+    if (customerOrders.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: "خریدار یا درخواستی با این شماره یافت نشد. حتما با شماره‌ای وارد شوید که سفارش خود را ثبت کرده‌اید." 
+      });
+    }
+
+    // Get VIP system settings
+    const vipPhonesSetting = await db.select()
+      .from(schema.siteSettings)
+      .where(eq(schema.siteSettings.key, "vip_phones"))
+      .limit(1);
+    const vipPhones: string[] = vipPhonesSetting.length > 0
+      ? JSON.parse(vipPhonesSetting[0].value)
+      : [];
+
+    const thresholdSetting = await db.select()
+      .from(schema.siteSettings)
+      .where(eq(schema.siteSettings.key, "vip_threshold"))
+      .limit(1);
+    const vipThreshold = thresholdSetting.length > 0
+      ? parseInt(thresholdSetting[0].value)
+      : 50 * 1000 * 1000;
+
+    // Calculate customer metrics
+    let totalOrdersCount = customerOrders.length;
+    let totalSpentValue = 0;
+    let mostRecentName = "";
+    let mostRecentCity = "";
+
+    for (const order of customerOrders) {
+      if (!mostRecentName && order.customerName) mostRecentName = order.customerName;
+      if (!mostRecentCity && order.customerCity) mostRecentCity = order.customerCity;
+      if (["CONFIRMED", "DELIVERED"].includes(order.status)) {
+        totalSpentValue += order.agreedPrice || 0;
+      }
+    }
+
+    const isManualVip = vipPhones.includes(cleanPhone);
+    const isAutoVip = totalSpentValue >= vipThreshold;
+    const isVip = isManualVip || isAutoVip;
+
+    // Rich products detail join can be done by fetching products
+    const productIds = customerOrders.map(o => o.productId);
+    let resolvedProducts: any[] = [];
+    if (productIds.length > 0) {
+      resolvedProducts = await db.select()
+        .from(schema.products)
+        .where(inArray(schema.products.id, productIds));
+    }
+
+    const ordersWithProducts = customerOrders.map(order => {
+      const prod = resolvedProducts.find(p => p.id === order.productId);
+      return {
+        ...order,
+        product: prod || null
+      };
+    });
+
+    // Calculate dynamic points: 1 point per 1,000,000 Tomans
+    const rewardPoints = Math.floor(totalSpentValue / 1000000);
+
+    // Dynamic Referral Stats (Scanning customer messages with safe string lookups)
+    const referralOrders = await db.select()
+      .from(schema.orders)
+      .where(like(schema.orders.customerMessage, `%[کد معرف: ${cleanPhone}]%`))
+      .orderBy(desc(schema.orders.createdAt));
+
+    const totalReferrals = referralOrders.length;
+    const successfulReferrals = referralOrders.filter(o => ["CONFIRMED", "DELIVERED"].includes(o.status)).length;
+    const referralEarning = successfulReferrals * 250000; // 250k Toman discount/bonus credit per successful conversion
+
+    return res.json({
+      success: true,
+      customer: {
+        phone: cleanPhone,
+        name: mostRecentName || "خریدار عزیز",
+        city: mostRecentCity,
+        totalOrders: totalOrdersCount,
+        totalSpent: totalSpentValue,
+        isVip,
+        rewardPoints,
+        vipThreshold,
+        nextRankRemaining: Math.max(0, vipThreshold - totalSpentValue),
+        totalReferrals,
+        successfulReferrals,
+        referralEarning
+      },
+      orders: ordersWithProducts
+    });
+  } catch (error: any) {
+    console.error("Customer Portal API error:", error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
+// SOCIAL LOGIN ENDPOINTS
+app.post("/api/customer/social-login", async (req, res) => {
+  try {
+    const db = getDb();
+    const { provider, providerId, email, name } = req.body;
+
+    if (!provider || !providerId) {
+      return res.status(400).json({ success: false, error: "اطلاعات حساب کاربری ناقص است" });
+    }
+
+    // Try finding existing connection
+    const existingConnections = await db.select()
+      .from(schema.customerConnections)
+      .where(
+        and(
+          eq(schema.customerConnections.provider, provider),
+          eq(schema.customerConnections.providerId, providerId)
+        )
+      )
+      .limit(1);
+
+    let connection;
+    if (existingConnections.length > 0) {
+      connection = existingConnections[0];
+    } else {
+      // Create new connection
+      const newId = crypto.randomUUID();
+      await db.insert(schema.customerConnections).values({
+        id: newId,
+        provider,
+        providerId,
+        email: email || "",
+        name: name || "",
+      });
+      
+      const freshlyCreated = await db.select()
+        .from(schema.customerConnections)
+        .where(eq(schema.customerConnections.id, newId))
+        .limit(1);
+      connection = freshlyCreated[0];
+    }
+
+    // If connection already has a linked phone:
+    if (connection.phone) {
+      const cleanPhone = connection.phone.trim();
+      const customerOrders = await db.select()
+        .from(schema.orders)
+        .where(eq(schema.orders.customerPhone, cleanPhone))
+        .orderBy(desc(schema.orders.createdAt));
+
+      let totalSpentValue = 0;
+      let mostRecentName = connection.name || "";
+      let mostRecentCity = "";
+
+      for (const order of customerOrders) {
+        if (!mostRecentName && order.customerName) mostRecentName = order.customerName;
+        if (!mostRecentCity && order.customerCity) mostRecentCity = order.customerCity;
+        if (["CONFIRMED", "DELIVERED"].includes(order.status)) {
+          totalSpentValue += order.agreedPrice || 0;
+        }
+      }
+
+      const thresholdSetting = await db.select()
+        .from(schema.siteSettings)
+        .where(eq(schema.siteSettings.key, "vip_threshold"))
+        .limit(1);
+      const vipThreshold = thresholdSetting.length > 0
+        ? parseInt(thresholdSetting[0].value)
+        : 50 * 1000 * 1000;
+
+      const vipPhonesSetting = await db.select()
+        .from(schema.siteSettings)
+        .where(eq(schema.siteSettings.key, "vip_phones"))
+        .limit(1);
+      const vipPhones = vipPhonesSetting.length > 0 ? JSON.parse(vipPhonesSetting[0].value) : [];
+
+      const isManualVip = vipPhones.includes(cleanPhone);
+      const isAutoVip = totalSpentValue >= vipThreshold;
+      const isVip = isManualVip || isAutoVip;
+
+      const productIds = customerOrders.map(o => o.productId);
+      let resolvedProducts: any[] = [];
+      if (productIds.length > 0) {
+        resolvedProducts = await db.select()
+          .from(schema.products)
+          .where(inArray(schema.products.id, productIds));
+      }
+
+      const ordersWithProducts = customerOrders.map(order => {
+        const prod = resolvedProducts.find(p => p.id === order.productId);
+        return { ...order, product: prod || null };
+      });
+
+      const rewardPoints = Math.floor(totalSpentValue / 1000000);
+
+      const referralOrders = await db.select()
+        .from(schema.orders)
+        .where(like(schema.orders.customerMessage, `%[کد معرف: ${cleanPhone}]%`))
+        .orderBy(desc(schema.orders.createdAt));
+
+      const totalReferrals = referralOrders.length;
+      const successfulReferrals = referralOrders.filter(o => ["CONFIRMED", "DELIVERED"].includes(o.status)).length;
+      const referralEarning = successfulReferrals * 250000;
+
+      return res.json({
+        success: true,
+        needsPhone: false,
+        connection: {
+          id: connection.id,
+          provider: connection.provider,
+          email: connection.email,
+          name: connection.name,
+          phone: connection.phone,
+        },
+        customer: {
+          phone: cleanPhone,
+          name: mostRecentName || "خریدار عزیز",
+          city: mostRecentCity || "ثبت‌نشده",
+          totalOrders: customerOrders.length,
+          totalSpent: totalSpentValue,
+          isVip,
+          rewardPoints,
+          vipThreshold,
+          nextRankRemaining: Math.max(0, vipThreshold - totalSpentValue),
+          totalReferrals,
+          successfulReferrals,
+          referralEarning
+        },
+        orders: ordersWithProducts
+      });
+    }
+
+    // If connection exists but has no phone linked
+    return res.json({
+      success: true,
+      needsPhone: true,
+      connection: {
+        id: connection.id,
+        provider: connection.provider,
+        email: connection.email,
+        name: connection.name,
+        phone: null
+      }
+    });
+  } catch (error: any) {
+    console.error("Social login API error:", error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post("/api/customer/link-phone", async (req, res) => {
+  try {
+    const db = getDb();
+    const { connectionId, phone, code } = req.body;
+
+    if (!connectionId || !phone || !code) {
+      return res.status(400).json({ success: false, error: "وارد کردن شماره همراه و کد تایید پیامکی الزامی است" });
+    }
+
+    const cleanPhone = phone.trim();
+    const cleanCode = code.trim();
+
+    // Verify SMS OTP first to secure the linking procedure
+    const record = otpStore.get(cleanPhone);
+    if (!record) {
+      return res.status(400).json({ success: false, error: "کد تایید این شماره معتبر نیست یا منقضی شده است. مجدداً ارسال کنید." });
+    }
+
+    if (Date.now() > record.expiresAt) {
+      otpStore.delete(cleanPhone);
+      return res.status(400).json({ success: false, error: "زمان ورود کد تایید سپری شده است." });
+    }
+
+    if (record.code !== cleanCode) {
+      return res.status(400).json({ success: false, error: "کد تایید پیامکی وارد شده نادرست است." });
+    }
+
+    // OTP succeeded!
+    otpStore.delete(cleanPhone);
+
+    // Check if phone has any orders or leads
+    const customerOrders = await db.select()
+      .from(schema.orders)
+      .where(eq(schema.orders.customerPhone, cleanPhone))
+      .limit(1);
+
+    if (customerOrders.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "خریدار یا سفارشی با این شماره همراه یافت نشد. برای اتصال، شماره‌ای را بنویسید که در هنگام خرید مبل در سیستم فاکتور ثبت شده است." 
+      });
+    }
+
+    // Update connection phone
+    await db.update(schema.customerConnections)
+      .set({ phone: cleanPhone, updatedAt: new Date() })
+      .where(eq(schema.customerConnections.id, connectionId));
+
+    return res.json({ success: true, message: "حساب کاربری با موفقیت به باشگاه مشتریان متصل شد" });
+  } catch (error: any) {
+    console.error("Link phone API error:", error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
+// -----------------------------------------------------------------------------
 // ADMIN DASHBOARD & FINANCE SUMMARY
+
 // -----------------------------------------------------------------------------
 app.get("/api/admin/dashboard", async (req, res) => {
   try {

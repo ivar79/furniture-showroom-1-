@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { Sofa, KeyRound, Menu, X, ArrowLeft } from "lucide-react";
+import { Sofa, KeyRound, Menu, X, ArrowLeft, Crown } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 export default function Navbar() {
@@ -20,6 +20,7 @@ export default function Navbar() {
   const navLinks = [
     { label: "صفحه اصلی", path: "/" },
     { label: "گالری محصولات", path: "/products" },
+    { label: "باشگاه مشتریان و VIP", path: "/customer-club" },
     { label: "درباره ما", path: "/about" },
     { label: "ارتباط با ما", path: "/contact" },
   ];
@@ -49,7 +50,7 @@ export default function Navbar() {
 
           {/* Desktop Navigation */}
           {!isAdmin && (
-            <div className="hidden md:flex items-center gap-8">
+            <div className="hidden md:flex items-center gap-8" dir="rtl">
               {navLinks.map((link) => {
                 const isActive = location.pathname === link.path;
                 return (
@@ -75,7 +76,16 @@ export default function Navbar() {
           )}
 
           {/* Auth Action Buttons */}
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-3">
+            {!isAdmin && (
+              <Link
+                to="/customer-club"
+                className="flex items-center gap-1.5 text-[11px] font-extrabold text-amber-950 bg-gradient-to-r from-amber-400 to-amber-500 hover:brightness-105 px-3.5 py-2 rounded-xl transition-all shadow-md shadow-amber-500/[0.08]"
+              >
+                <Crown className="w-3.5 h-3.5 shrink-0" />
+                <span>باشگاه مشتریان و VIP</span>
+              </Link>
+            )}
             {isAdmin ? (
               <Link
                 to="/"

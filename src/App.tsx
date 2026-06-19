@@ -10,6 +10,7 @@ import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
+import CustomerClub from "./pages/CustomerClub";
 
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -19,9 +20,10 @@ import AdminProducts from "./pages/AdminProducts";
 import AdminShowrooms from "./pages/AdminShowrooms";
 import AdminCommissions from "./pages/AdminCommissions";
 import AdminSettings from "./pages/AdminSettings";
+import AdminCustomers from "./pages/AdminCustomers";
 
 // Icons for Admin Sidebar
-import { LayoutDashboard, ShoppingCart, Sofa, Store, Receipt, LogOut, ChevronLeft, Menu, Settings } from "lucide-react";
+import { LayoutDashboard, ShoppingCart, Sofa, Store, Receipt, LogOut, ChevronLeft, Menu, Settings, Users } from "lucide-react";
 
 export default function App() {
   return (
@@ -56,6 +58,7 @@ function MainLayout() {
           <Route path="/product/:slug" element={<ProductDetail />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/customer-club" element={<CustomerClub />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
@@ -106,6 +109,7 @@ function AdminWorkspaceLayout() {
     { path: "/admin/products", name: "مدیریت گالری مبل‌ها", icon: <Sofa className="w-4 h-4" /> },
     { path: "/admin/showrooms", name: "مدیریت نمایشگاه‌ها", icon: <Store className="w-4 h-4" /> },
     { path: "/admin/commissions", name: "گزارشات پورسانت", icon: <Receipt className="w-4 h-4" /> },
+    { path: "/admin/customers", name: "باشگاه مشتریان و VIP", icon: <Users className="w-4 h-4" /> },
     { path: "/admin/settings", name: "تنظیمات اصلی سایت", icon: <Settings className="w-4 h-4" /> },
   ];
 
@@ -255,6 +259,7 @@ function AdminWorkspaceLayout() {
             <Route path="/admin/products" element={<AdminProducts />} />
             <Route path="/admin/showrooms" element={<AdminShowrooms />} />
             <Route path="/admin/commissions" element={<AdminCommissions />} />
+            <Route path="/admin/customers" element={<AdminCustomers />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
           </Routes>
         </main>
