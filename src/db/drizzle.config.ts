@@ -4,10 +4,10 @@ import * as dotenv from "dotenv";
 // Load env variables
 dotenv.config();
 
-const databaseUrl = process.env.DATABASE_URL;
+const databaseUrl = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL;
 
 if (!databaseUrl) {
-  throw new Error("DATABASE_URL must be set in environment variables.");
+  throw new Error("DATABASE_URL or NEON_DATABASE_URL must be set in environment variables.");
 }
 
 export default defineConfig({

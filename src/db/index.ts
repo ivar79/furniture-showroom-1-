@@ -1,6 +1,9 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import * as schema from "./schema";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const { Pool } = pg;
 
@@ -8,7 +11,7 @@ let dbInstance: any = null;
 
 export function getDb() {
   if (!dbInstance) {
-    const databaseUrl = process.env.DATABASE_URL;
+    const databaseUrl = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL;
 
     let pool;
     if (databaseUrl) {

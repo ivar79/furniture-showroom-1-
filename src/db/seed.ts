@@ -216,3 +216,17 @@ export async function runSeed() {
     console.error("Error running DB seed:", error);
   }
 }
+
+// Automatically run seed when executed directly as a script via CLI
+if (process.argv[1] && (process.argv[1].includes("seed.ts") || process.argv[1].endsWith("seed.js"))) {
+  runSeed()
+    .then(() => {
+      console.log("Seeding process completed.");
+      process.exit(0);
+    })
+    .catch((err) => {
+      console.error("Seeding command failure:", err);
+      process.exit(1);
+    });
+}
+
