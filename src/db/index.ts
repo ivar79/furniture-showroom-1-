@@ -10,16 +10,33 @@ export function getDb() {
   if (!dbInstance) {
     const databaseUrl = process.env.DATABASE_URL;
 
-    if (!databaseUrl) {
-      throw new Error("DATABASE_URL environment variable is missing.");
-    }
+    let pool;
+    if (databaseUrl) {
+      pool = new Pool({
+        connectionString: databaseUrl,
+        ssl: databaseUrl.includes("neon.tech") || databaseUrl.includes("sslmode=") ? { rejectUnauthorized: false } : undefined,
+      });
+    } else {
+      const host = process.env.SQL_HOST;
+      const database = process.env.SQL_DB_NAME;
+      const user = process.env.SQL_ADMIN_USER;
+      const password = process.env.SQL_ADMIN_PASSWORD;
 
-    const pool = new Pool({
-      connectionString: databaseUrl,
-      max: 10,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 10000, // زمان اتصال را برای دیتابیس‌های ابری مثل نئون کمی بیشتر می‌کنیم
-    });
+      if (!host || !database || !user || !password) {
+        throw new Error("Database configuration environment variables are missing.");
+      }
+
+      pool = new Pool({
+        host,
+        database,
+        user,
+        password,
+        port: 5432,
+        max: 10,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 2000,
+      });
+    }
 
     dbInstance = drizzle(pool, { schema });
   }
