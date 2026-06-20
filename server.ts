@@ -1542,9 +1542,17 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
+  // Only bind port if not on Vercel serverless environment
+  if (!process.env.VERCEL) {
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  }
 }
 
-startServer();
+// Only run startServer if not in Vercel. Vercel routes handle static files natively.
+if (!process.env.VERCEL) {
+  startServer();
+}
+
+export default app;
