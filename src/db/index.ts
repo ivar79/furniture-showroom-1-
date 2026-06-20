@@ -8,24 +8,17 @@ let dbInstance: any = null;
 
 export function getDb() {
   if (!dbInstance) {
-    const host = process.env.SQL_HOST;
-    const database = process.env.SQL_DB_NAME;
-    const user = process.env.SQL_ADMIN_USER;
-    const password = process.env.SQL_ADMIN_PASSWORD;
+    const databaseUrl = process.env.DATABASE_URL;
 
-    if (!host || !database || !user || !password) {
-      throw new Error("Database configuration environment variables are missing.");
+    if (!databaseUrl) {
+      throw new Error("DATABASE_URL environment variable is missing.");
     }
 
     const pool = new Pool({
-      host,
-      database,
-      user,
-      password,
-      port: 5432,
+      connectionString: databaseUrl,
       max: 10,
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
+      connectionTimeoutMillis: 10000, // زمان اتصال را برای دیتابیس‌های ابری مثل نئون کمی بیشتر می‌کنیم
     });
 
     dbInstance = drizzle(pool, { schema });
