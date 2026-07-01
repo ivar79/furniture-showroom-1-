@@ -22,10 +22,12 @@ async function initializeApp() {
   }
 }
 
-initializeApp();
+if (!process.env.VERCEL) {
+  initializeApp();
+}
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
@@ -45,36 +47,12 @@ app.post("/api/upload", async (req, res) => {
       return res.status(400).json({ success: false, error: "تصویری ارسال نشده است." });
     }
 
-    const matches = image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-    if (!matches || matches.length !== 3) {
-      return res.status(400).json({ success: false, error: "فرمت تصویر ارسالی معتبر نیست." });
-    }
-
-    const fileType = matches[1];
-    const base64Data = matches[2];
-    const buffer = Buffer.from(base64Data, "base64");
-
-    let extension = "png";
-    if (fileType.includes("jpeg") || fileType.includes("jpg")) {
-      extension = "jpg";
-    } else if (fileType.includes("gif")) {
-      extension = "gif";
-    } else if (fileType.includes("webp")) {
-      extension = "webp";
-    } else if (fileType.includes("svg")) {
-      extension = "svg";
-    }
-
-    const filename = `${Date.now()}-${Math.floor(Math.random() * 1000000)}.${extension}`;
-    const filePath = path.join(uploadsDir, filename);
-
-    await fs.promises.writeFile(filePath, buffer);
-
-    const fileUrl = `/uploads/${filename}`;
-    return res.json({ success: true, url: fileUrl });
+    // Since Vercel is a read-only filesystem, we will just return the base64 string
+    // to be stored directly in the database.
+    return res.json({ success: true, url: image });
   } catch (error: any) {
-    console.error("Local file upload error on backend:", error);
-    return res.status(500).json({ success: false, error: "خطا در بارگذاری و ذخیره تصویر." });
+    console.error("Upload error on backend:", error);
+    return res.status(500).json({ success: false, error: "خطا در بارگذاری تصویر." });
   }
 });
 
