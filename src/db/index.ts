@@ -11,7 +11,7 @@ let dbInstance: any = null;
 
 export function getDb() {
   if (!dbInstance) {
-    const databaseUrl = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL;
+    const databaseUrl = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || process.env.modernhome_DATABASE_URL;
 
     let pool;
     if (databaseUrl) {
