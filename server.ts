@@ -1,7 +1,6 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
-import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import bcryptjs from "bcryptjs";
 import { getDb } from "./src/db/index.js";
@@ -1851,6 +1850,8 @@ app.post("/api/admin/settings", async (req, res) => {
 // -----------------------------------------------------------------------------
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
+    const viteModule = "vite";
+    const { createServer: createViteServer } = await import(viteModule);
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
