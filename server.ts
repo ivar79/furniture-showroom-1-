@@ -4,9 +4,9 @@ import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import bcryptjs from "bcryptjs";
-import { getDb } from "./src/db/index";
-import { runSeed } from "./src/db/seed";
-import * as schema from "./src/db/schema";
+import { getDb } from "./src/db/index.js";
+import { runSeed } from "./src/db/seed.js";
+import * as schema from "./src/db/schema.js";
 import { eq, and, desc, sql, inArray, like } from "drizzle-orm";
 
 dotenv.config();
@@ -32,7 +32,7 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-// Serve custom uploaded files statically 
+// Serve custom uploaded files statically
 const uploadsDir = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
@@ -44,7 +44,9 @@ app.post("/api/upload", async (req, res) => {
   try {
     const { image, name } = req.body;
     if (!image) {
-      return res.status(400).json({ success: false, error: "تصویری ارسال نشده است." });
+      return res
+        .status(400)
+        .json({ success: false, error: "تصویری ارسال نشده است." });
     }
 
     // Since Vercel is a read-only filesystem, we will just return the base64 string
@@ -52,16 +54,20 @@ app.post("/api/upload", async (req, res) => {
     return res.json({ success: true, url: image });
   } catch (error: any) {
     console.error("Upload error on backend:", error);
-    return res.status(500).json({ success: false, error: "خطا در بارگذاری تصویر." });
+    return res
+      .status(500)
+      .json({ success: false, error: "خطا در بارگذاری تصویر." });
   }
 });
 
 // Simplistic robust Tokenless Admin auth endpoint for AI Studio Preview
 app.post("/api/auth/login", async (req, res) => {
   const { username, password } = req.body;
-  
+
   if (!username || !password) {
-    return res.status(400).json({ success: false, error: "نام کاربری و رمز عبور الزامی است." });
+    return res
+      .status(400)
+      .json({ success: false, error: "نام کاربری و رمز عبور الزامی است." });
   }
 
   try {
@@ -73,14 +79,18 @@ app.post("/api/auth/login", async (req, res) => {
       .limit(1);
 
     if (found.length === 0) {
-      return res.status(401).json({ success: false, error: "نام کاربری یا رمز عبور اشتباه است." });
+      return res
+        .status(401)
+        .json({ success: false, error: "نام کاربری یا رمز عبور اشتباه است." });
     }
 
     const admin = found[0];
     const isMatched = await bcryptjs.compare(password, admin.password);
-    
+
     if (!isMatched) {
-      return res.status(401).json({ success: false, error: "نام کاربری یا رمز عبور اشتباه است." });
+      return res
+        .status(401)
+        .json({ success: false, error: "نام کاربری یا رمز عبور اشتباه است." });
     }
 
     // Return mock success with localized session indicator
@@ -90,11 +100,13 @@ app.post("/api/auth/login", async (req, res) => {
         id: admin.id,
         username: admin.username,
       },
-      token: "admin-session-token-f918903u21dwad"
+      token: "admin-session-token-f918903u21dwad",
     });
   } catch (error: any) {
     console.error("Login failure:", error);
-    return res.status(500).json({ success: false, error: "خطایی در سیستم رخ داده است." });
+    return res
+      .status(500)
+      .json({ success: false, error: "خطایی در سیستم رخ داده است." });
   }
 });
 
@@ -104,7 +116,10 @@ app.post("/api/auth/login", async (req, res) => {
 app.get("/api/showrooms", async (req, res) => {
   try {
     const db = getDb();
-    const list = await db.select().from(schema.showrooms).orderBy(desc(schema.showrooms.createdAt));
+    const list = await db
+      .select()
+      .from(schema.showrooms)
+      .orderBy(desc(schema.showrooms.createdAt));
     return res.json({ success: true, showrooms: list });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
@@ -112,22 +127,36 @@ app.get("/api/showrooms", async (req, res) => {
 });
 
 app.post("/api/showrooms", async (req, res) => {
-  const { name, city, contactPhone, contactName, commissionRate, address, notes, isActive } = req.body;
+  const {
+    name,
+    city,
+    contactPhone,
+    contactName,
+    commissionRate,
+    address,
+    notes,
+    isActive,
+  } = req.body;
   if (!name || !city || !contactPhone || commissionRate === undefined) {
-    return res.status(400).json({ success: false, error: "پر کردن فیلدهای ستاره‌دار الزامی است." });
+    return res
+      .status(400)
+      .json({ success: false, error: "پر کردن فیلدهای ستاره‌دار الزامی است." });
   }
   try {
     const db = getDb();
-    const inserted = await db.insert(schema.showrooms).values({
-      name,
-      city,
-      contactPhone,
-      contactName,
-      commissionRate: commissionRate.toString(),
-      address,
-      notes,
-      isActive: isActive !== false,
-    }).returning();
+    const inserted = await db
+      .insert(schema.showrooms)
+      .values({
+        name,
+        city,
+        contactPhone,
+        contactName,
+        commissionRate: commissionRate.toString(),
+        address,
+        notes,
+        isActive: isActive !== false,
+      })
+      .returning();
     return res.json({ success: true, showroom: inserted[0] });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
@@ -136,20 +165,33 @@ app.post("/api/showrooms", async (req, res) => {
 
 app.put("/api/showrooms/:id", async (req, res) => {
   const { id } = req.params;
-  const { name, city, contactPhone, contactName, commissionRate, address, notes, isActive } = req.body;
+  const {
+    name,
+    city,
+    contactPhone,
+    contactName,
+    commissionRate,
+    address,
+    notes,
+    isActive,
+  } = req.body;
   try {
     const db = getDb();
-    const updated = await db.update(schema.showrooms).set({
-      name,
-      city,
-      contactPhone,
-      contactName,
-      commissionRate: commissionRate ? commissionRate.toString() : undefined,
-      address,
-      notes,
-      isActive: isActive === undefined ? undefined : isActive,
-      updatedAt: new Date(),
-    }).where(eq(schema.showrooms.id, id)).returning();
+    const updated = await db
+      .update(schema.showrooms)
+      .set({
+        name,
+        city,
+        contactPhone,
+        contactName,
+        commissionRate: commissionRate ? commissionRate.toString() : undefined,
+        address,
+        notes,
+        isActive: isActive === undefined ? undefined : isActive,
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.showrooms.id, id))
+      .returning();
     return res.json({ success: true, showroom: updated[0] });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
@@ -161,11 +203,18 @@ app.delete("/api/showrooms/:id", async (req, res) => {
   try {
     const db = getDb();
     // Soft toggle isActive instead of hard delete
-    const current = await db.select().from(schema.showrooms).where(eq(schema.showrooms.id, id)).limit(1);
+    const current = await db
+      .select()
+      .from(schema.showrooms)
+      .where(eq(schema.showrooms.id, id))
+      .limit(1);
     if (current.length === 0) {
-      return res.status(404).json({ success: false, error: "نمایشگاه یافت نشد." });
+      return res
+        .status(404)
+        .json({ success: false, error: "نمایشگاه یافت نشد." });
     }
-    const updated = await db.update(schema.showrooms)
+    const updated = await db
+      .update(schema.showrooms)
       .set({ isActive: !current[0].isActive })
       .where(eq(schema.showrooms.id, id))
       .returning();
@@ -181,7 +230,10 @@ app.delete("/api/showrooms/:id", async (req, res) => {
 app.get("/api/categories", async (req, res) => {
   try {
     const db = getDb();
-    const list = await db.select().from(schema.categories).orderBy(schema.categories.sortOrder);
+    const list = await db
+      .select()
+      .from(schema.categories)
+      .orderBy(schema.categories.sortOrder);
     return res.json({ success: true, categories: list });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
@@ -195,23 +247,32 @@ app.get("/api/products", async (req, res) => {
   const { categorySlug, showcaseOnly } = req.query;
   try {
     const db = getDb();
-    
+
     // Join products with category and showroom
-    const list = await db.select({
-      product: schema.products,
-      showroomName: schema.showrooms.name,
-      categoryName: schema.categories.name,
-    })
-    .from(schema.products)
-    .innerJoin(schema.showrooms, eq(schema.products.showroomId, schema.showrooms.id))
-    .innerJoin(schema.categories, eq(schema.products.categoryId, schema.categories.id))
-    .orderBy(desc(schema.products.createdAt));
+    const list = await db
+      .select({
+        product: schema.products,
+        showroomName: schema.showrooms.name,
+        categoryName: schema.categories.name,
+      })
+      .from(schema.products)
+      .innerJoin(
+        schema.showrooms,
+        eq(schema.products.showroomId, schema.showrooms.id),
+      )
+      .innerJoin(
+        schema.categories,
+        eq(schema.products.categoryId, schema.categories.id),
+      )
+      .orderBy(desc(schema.products.createdAt));
 
     let filtered = list;
     if (showcaseOnly === "true") {
-      filtered = filtered.filter(p => p.product.isFeatured && p.product.isActive);
+      filtered = filtered.filter(
+        (p) => p.product.isFeatured && p.product.isActive,
+      );
     }
-    
+
     return res.json({ success: true, products: filtered });
   } catch (error: any) {
     console.error("Fetch products error:", error);
@@ -223,32 +284,48 @@ app.get("/api/products/:slug", async (req, res) => {
   const { slug } = req.params;
   try {
     const db = getDb();
-    const results = await db.select({
-      product: schema.products,
-      showroom: schema.showrooms,
-      category: schema.categories,
-    })
-    .from(schema.products)
-    .innerJoin(schema.showrooms, eq(schema.products.showroomId, schema.showrooms.id))
-    .innerJoin(schema.categories, eq(schema.products.categoryId, schema.categories.id))
-    .where(eq(schema.products.slug, slug))
-    .limit(1);
-
-    if (results.length === 0) {
-      // Try fetching by ID
-      const resultsById = await db.select({
+    const results = await db
+      .select({
         product: schema.products,
         showroom: schema.showrooms,
         category: schema.categories,
       })
       .from(schema.products)
-      .innerJoin(schema.showrooms, eq(schema.products.showroomId, schema.showrooms.id))
-      .innerJoin(schema.categories, eq(schema.products.categoryId, schema.categories.id))
-      .where(eq(schema.products.id, slug))
+      .innerJoin(
+        schema.showrooms,
+        eq(schema.products.showroomId, schema.showrooms.id),
+      )
+      .innerJoin(
+        schema.categories,
+        eq(schema.products.categoryId, schema.categories.id),
+      )
+      .where(eq(schema.products.slug, slug))
       .limit(1);
 
+    if (results.length === 0) {
+      // Try fetching by ID
+      const resultsById = await db
+        .select({
+          product: schema.products,
+          showroom: schema.showrooms,
+          category: schema.categories,
+        })
+        .from(schema.products)
+        .innerJoin(
+          schema.showrooms,
+          eq(schema.products.showroomId, schema.showrooms.id),
+        )
+        .innerJoin(
+          schema.categories,
+          eq(schema.products.categoryId, schema.categories.id),
+        )
+        .where(eq(schema.products.id, slug))
+        .limit(1);
+
       if (resultsById.length === 0) {
-        return res.status(404).json({ success: false, error: "محصول مورد نظر یافت نشد." });
+        return res
+          .status(404)
+          .json({ success: false, error: "محصول مورد نظر یافت نشد." });
       }
       return res.json({ success: true, data: resultsById[0] });
     }
@@ -261,45 +338,75 @@ app.get("/api/products/:slug", async (req, res) => {
 
 app.post("/api/products", async (req, res) => {
   const {
-    name, slug, description, basePrice, images, colors,
-    material, dimensions, fabricType, innerFrame, seatSponge,
-    baseMaterial, isFeatured, isActive, categoryId, showroomId
+    name,
+    slug,
+    description,
+    basePrice,
+    images,
+    colors,
+    material,
+    dimensions,
+    fabricType,
+    innerFrame,
+    seatSponge,
+    baseMaterial,
+    isFeatured,
+    isActive,
+    categoryId,
+    showroomId,
   } = req.body;
 
   if (!name || !slug || !basePrice || !categoryId || !showroomId) {
-    return res.status(400).json({ success: false, error: "فیلدهای اجباری پر نشده‌اند." });
+    return res
+      .status(400)
+      .json({ success: false, error: "فیلدهای اجباری پر نشده‌اند." });
   }
 
   try {
     const db = getDb();
-    
+
     // Check slug uniqueness
-    const exists = await db.select().from(schema.products).where(eq(schema.products.slug, slug)).limit(1);
+    const exists = await db
+      .select()
+      .from(schema.products)
+      .where(eq(schema.products.slug, slug))
+      .limit(1);
     if (exists.length > 0) {
-      return res.status(400).json({ success: false, error: "شناسه یکتا (slug) تکراری است." });
+      return res
+        .status(400)
+        .json({ success: false, error: "شناسه یکتا (slug) تکراری است." });
     }
 
-    const parsedImages = Array.isArray(images) ? images : [images].filter(Boolean);
-    const parsedColors = Array.isArray(colors) ? colors : colors ? colors.split("،").map((c: string) => c.trim()) : [];
+    const parsedImages = Array.isArray(images)
+      ? images
+      : [images].filter(Boolean);
+    const parsedColors = Array.isArray(colors)
+      ? colors
+      : colors
+        ? colors.split("،").map((c: string) => c.trim())
+        : [];
 
-    const inserted = await db.insert(schema.products).values({
-      name,
-      slug,
-      description,
-      basePrice: Number(basePrice),
-      images: parsedImages,
-      colors: parsedColors,
-      material,
-      dimensions,
-      fabricType,
-      innerFrame,
-      seatSponge,
-      baseMaterial,
-      isFeatured: !!isFeatured,
-      isActive: isActive !== false,
-      categoryId,
-      showroomId,
-    }).returning();
+    const inserted = await db
+      .insert(schema.products)
+      .values({
+        name,
+        slug,
+        description,
+        basePrice: Number(basePrice),
+        images: parsedImages,
+        colors: parsedColors,
+        material,
+        dimensions,
+        fabricType,
+        innerFrame,
+        seatSponge,
+        baseMaterial,
+        isFeatured: !!isFeatured,
+        isActive: isActive !== false,
+        categoryId,
+        showroomId,
+      })
+      .returning();
 
     return res.json({ success: true, product: inserted[0] });
   } catch (error: any) {
@@ -310,36 +417,57 @@ app.post("/api/products", async (req, res) => {
 app.put("/api/products/:id", async (req, res) => {
   const { id } = req.params;
   const {
-    name, slug, description, basePrice, images, colors,
-    material, dimensions, fabricType, innerFrame, seatSponge,
-    baseMaterial, isFeatured, isActive, categoryId, showroomId
+    name,
+    slug,
+    description,
+    basePrice,
+    images,
+    colors,
+    material,
+    dimensions,
+    fabricType,
+    innerFrame,
+    seatSponge,
+    baseMaterial,
+    isFeatured,
+    isActive,
+    categoryId,
+    showroomId,
   } = req.body;
 
   try {
     const db = getDb();
-    
-    const parsedImages = Array.isArray(images) ? images : undefined;
-    const parsedColors = Array.isArray(colors) ? colors : colors ? colors.split("،").map((c: string) => c.trim()) : undefined;
 
-    const updated = await db.update(schema.products).set({
-      name,
-      slug,
-      description,
-      basePrice: basePrice ? Number(basePrice) : undefined,
-      images: parsedImages,
-      colors: parsedColors,
-      material,
-      dimensions,
-      fabricType,
-      innerFrame,
-      seatSponge,
-      baseMaterial,
-      isFeatured: isFeatured !== undefined ? !!isFeatured : undefined,
-      isActive: isActive !== undefined ? !!isActive : undefined,
-      categoryId,
-      showroomId,
-      updatedAt: new Date(),
-    }).where(eq(schema.products.id, id)).returning();
+    const parsedImages = Array.isArray(images) ? images : undefined;
+    const parsedColors = Array.isArray(colors)
+      ? colors
+      : colors
+        ? colors.split("،").map((c: string) => c.trim())
+        : undefined;
+
+    const updated = await db
+      .update(schema.products)
+      .set({
+        name,
+        slug,
+        description,
+        basePrice: basePrice ? Number(basePrice) : undefined,
+        images: parsedImages,
+        colors: parsedColors,
+        material,
+        dimensions,
+        fabricType,
+        innerFrame,
+        seatSponge,
+        baseMaterial,
+        isFeatured: isFeatured !== undefined ? !!isFeatured : undefined,
+        isActive: isActive !== undefined ? !!isActive : undefined,
+        categoryId,
+        showroomId,
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.products.id, id))
+      .returning();
 
     return res.json({ success: true, product: updated[0] });
   } catch (error: any) {
@@ -352,11 +480,16 @@ app.delete("/api/products/:id", async (req, res) => {
   try {
     const db = getDb();
     // Soft Toggle dynamic state
-    const current = await db.select().from(schema.products).where(eq(schema.products.id, id)).limit(1);
+    const current = await db
+      .select()
+      .from(schema.products)
+      .where(eq(schema.products.id, id))
+      .limit(1);
     if (current.length === 0) {
       return res.status(404).json({ success: false, error: "محصول یافت نشد." });
     }
-    const updated = await db.update(schema.products)
+    const updated = await db
+      .update(schema.products)
       .set({ isActive: !current[0].isActive })
       .where(eq(schema.products.id, id))
       .returning();
@@ -366,63 +499,89 @@ app.delete("/api/products/:id", async (req, res) => {
   }
 });
 
-
 // -----------------------------------------------------------------------------
 // ORDERS API
 // -----------------------------------------------------------------------------
 app.post("/api/orders", async (req, res) => {
-  const { customerName, customerPhone, customerCity, customerMessage, productId } = req.body;
+  const {
+    customerName,
+    customerPhone,
+    customerCity,
+    customerMessage,
+    productId,
+  } = req.body;
 
   if (!customerName || !customerPhone || !customerCity || !productId) {
-    return res.status(400).json({ success: false, error: "لطفاً تمام فیلدهای ستاره‌دار را تکمیل کنید." });
+    return res
+      .status(400)
+      .json({
+        success: false,
+        error: "لطفاً تمام فیلدهای ستاره‌دار را تکمیل کنید.",
+      });
   }
 
   // Iranian Phone Regex validation
   const iranPhoneRegex = /^(\+98|0098|98|0)?9[0-9]{9}$/;
   if (!iranPhoneRegex.test(customerPhone)) {
-    return res.status(400).json({ success: false, error: "شماره موبایل وارد شده معتبر نیست. مثال: 09123456789" });
+    return res
+      .status(400)
+      .json({
+        success: false,
+        error: "شماره موبایل وارد شده معتبر نیست. مثال: 09123456789",
+      });
   }
 
   try {
     const db = getDb();
 
     // Fetch product to find showroomId and initial commission rate
-    const foundProducts = await db.select({
-      product: schema.products,
-      showroom: schema.showrooms
-    })
-    .from(schema.products)
-    .innerJoin(schema.showrooms, eq(schema.products.showroomId, schema.showrooms.id))
-    .where(eq(schema.products.id, productId))
-    .limit(1);
+    const foundProducts = await db
+      .select({
+        product: schema.products,
+        showroom: schema.showrooms,
+      })
+      .from(schema.products)
+      .innerJoin(
+        schema.showrooms,
+        eq(schema.products.showroomId, schema.showrooms.id),
+      )
+      .where(eq(schema.products.id, productId))
+      .limit(1);
 
     if (foundProducts.length === 0) {
-      return res.status(444).json({ success: false, error: "محصول انتخابی وجود ندارد." });
+      return res
+        .status(444)
+        .json({ success: false, error: "محصول انتخابی وجود ندارد." });
     }
 
     const matchedProduct = foundProducts[0].product;
     const matchedShowroom = foundProducts[0].showroom;
 
     // Create Order with base PENDING status, copying showroom commission rate
-    const finalOrder = await db.insert(schema.orders).values({
-      customerName,
-      customerPhone,
-      customerCity,
-      customerMessage,
-      productId,
-      showroomId: matchedProduct.showroomId,
-      commissionRate: matchedShowroom.commissionRate,
-      status: "PENDING",
-    }).returning();
+    const finalOrder = await db
+      .insert(schema.orders)
+      .values({
+        customerName,
+        customerPhone,
+        customerCity,
+        customerMessage,
+        productId,
+        showroomId: matchedProduct.showroomId,
+        commissionRate: matchedShowroom.commissionRate,
+        status: "PENDING",
+      })
+      .returning();
 
     return res.json({
       success: true,
       message: "درخواست شما ثبت شد. کارشناسان ما ظرف ۲۴ ساعت تماس می‌گیرند.",
-      order: finalOrder[0]
+      order: finalOrder[0],
     });
   } catch (error: any) {
     console.error("Order submit failed:", error);
-    return res.status(500).json({ success: false, error: "خطایی پیش آمده: " + error.message });
+    return res
+      .status(500)
+      .json({ success: false, error: "خطایی پیش آمده: " + error.message });
   }
 });
 
@@ -431,32 +590,40 @@ app.get("/api/admin/orders", async (req, res) => {
   const { status, showroomId, search } = req.query;
   try {
     const db = getDb();
-    
-    let query = db.select({
-      order: schema.orders,
-      productName: schema.products.name,
-      showroomName: schema.showrooms.name,
-    })
-    .from(schema.orders)
-    .innerJoin(schema.products, eq(schema.orders.productId, schema.products.id))
-    .innerJoin(schema.showrooms, eq(schema.orders.showroomId, schema.showrooms.id))
-    .orderBy(desc(schema.orders.createdAt));
+
+    let query = db
+      .select({
+        order: schema.orders,
+        productName: schema.products.name,
+        showroomName: schema.showrooms.name,
+      })
+      .from(schema.orders)
+      .innerJoin(
+        schema.products,
+        eq(schema.orders.productId, schema.products.id),
+      )
+      .innerJoin(
+        schema.showrooms,
+        eq(schema.orders.showroomId, schema.showrooms.id),
+      )
+      .orderBy(desc(schema.orders.createdAt));
 
     let list = await query;
 
     // Apply client filters manually in-memoriam or build conditions dynamically
     if (status && status !== "ALL") {
-      list = list.filter(o => o.order.status === status);
+      list = list.filter((o) => o.order.status === status);
     }
     if (showroomId && showroomId !== "ALL") {
-      list = list.filter(o => o.order.showroomId === showroomId);
+      list = list.filter((o) => o.order.showroomId === showroomId);
     }
     if (search) {
       const searchStr = String(search).toLowerCase();
-      list = list.filter(o => 
-        o.order.customerName.toLowerCase().includes(searchStr) || 
-        o.order.customerPhone.toLowerCase().includes(searchStr) ||
-        o.productName.toLowerCase().includes(searchStr)
+      list = list.filter(
+        (o) =>
+          o.order.customerName.toLowerCase().includes(searchStr) ||
+          o.order.customerPhone.toLowerCase().includes(searchStr) ||
+          o.productName.toLowerCase().includes(searchStr),
       );
     }
 
@@ -470,25 +637,40 @@ app.get("/api/admin/orders/:id", async (req, res) => {
   const { id } = req.params;
   try {
     const db = getDb();
-    const result = await db.select({
-      order: schema.orders,
-      product: schema.products,
-      showroom: schema.showrooms,
-    })
-    .from(schema.orders)
-    .innerJoin(schema.products, eq(schema.orders.productId, schema.products.id))
-    .innerJoin(schema.showrooms, eq(schema.orders.showroomId, schema.showrooms.id))
-    .where(eq(schema.orders.id, id))
-    .limit(1);
+    const result = await db
+      .select({
+        order: schema.orders,
+        product: schema.products,
+        showroom: schema.showrooms,
+      })
+      .from(schema.orders)
+      .innerJoin(
+        schema.products,
+        eq(schema.orders.productId, schema.products.id),
+      )
+      .innerJoin(
+        schema.showrooms,
+        eq(schema.orders.showroomId, schema.showrooms.id),
+      )
+      .where(eq(schema.orders.id, id))
+      .limit(1);
 
     if (result.length === 0) {
       return res.status(404).json({ success: false, error: "سفارش یافت نشد." });
     }
 
     // Include the commission relation if exists
-    const commissionRec = await db.select().from(schema.commissions).where(eq(schema.commissions.orderId, id)).limit(1);
+    const commissionRec = await db
+      .select()
+      .from(schema.commissions)
+      .where(eq(schema.commissions.orderId, id))
+      .limit(1);
 
-    return res.json({ success: true, data: result[0], commission: commissionRec[0] || null });
+    return res.json({
+      success: true,
+      data: result[0],
+      commission: commissionRec[0] || null,
+    });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
   }
@@ -504,14 +686,18 @@ app.put("/api/admin/orders/:id", async (req, res) => {
     agreedPrice,
     commissionPaid,
     paymentMethod,
-    commissionNotes
+    commissionNotes,
   } = req.body;
 
   try {
     const db = getDb();
 
     // Fetch existing order to verify rate
-    const currentOrder = await db.select().from(schema.orders).where(eq(schema.orders.id, id)).limit(1);
+    const currentOrder = await db
+      .select()
+      .from(schema.orders)
+      .where(eq(schema.orders.id, id))
+      .limit(1);
     if (currentOrder.length === 0) {
       return res.status(404).json({ success: false, error: "سفارش یافت نشد." });
     }
@@ -528,10 +714,12 @@ app.put("/api/admin/orders/:id", async (req, res) => {
     if (agreedPrice !== undefined) {
       const priceNum = agreedPrice ? Number(agreedPrice) : null;
       updatedFields.agreedPrice = priceNum;
-      
+
       if (priceNum && orderData.commissionRate) {
         // commissionAmount = Math.round((agreedPrice * commissionRate) / 100)
-        commissionVal = Math.round((priceNum * Number(orderData.commissionRate)) / 100);
+        commissionVal = Math.round(
+          (priceNum * Number(orderData.commissionRate)) / 100,
+        );
         updatedFields.commissionAmount = commissionVal;
       } else {
         updatedFields.commissionAmount = null;
@@ -545,7 +733,8 @@ app.put("/api/admin/orders/:id", async (req, res) => {
     }
 
     // 1. Update the Order table
-    const resultOrder = await db.update(schema.orders)
+    const resultOrder = await db
+      .update(schema.orders)
       .set({
         ...updatedFields,
         updatedAt: new Date(),
@@ -556,10 +745,15 @@ app.put("/api/admin/orders/:id", async (req, res) => {
     // 2. Synchronize the Commissions table
     if (commissionVal && commissionVal > 0) {
       // Check if commission table entry exists
-      const existingComm = await db.select().from(schema.commissions).where(eq(schema.commissions.orderId, id)).limit(1);
-      
+      const existingComm = await db
+        .select()
+        .from(schema.commissions)
+        .where(eq(schema.commissions.orderId, id))
+        .limit(1);
+
       if (existingComm.length > 0) {
-        await db.update(schema.commissions)
+        await db
+          .update(schema.commissions)
           .set({
             amount: commissionVal,
             isPaid: !!commissionPaid,
@@ -589,7 +783,6 @@ app.put("/api/admin/orders/:id", async (req, res) => {
   }
 });
 
-
 // -----------------------------------------------------------------------------
 // CUSTOMER & VIP CLUB ENDPOINTS
 // -----------------------------------------------------------------------------
@@ -597,44 +790,51 @@ app.get("/api/admin/customers", async (req, res) => {
   try {
     const db = getDb();
     const allOrders = await db.select().from(schema.orders);
-    
+
     // Fetch VIP settings list
-    const vipPhonesSetting = await db.select()
+    const vipPhonesSetting = await db
+      .select()
       .from(schema.siteSettings)
       .where(eq(schema.siteSettings.key, "vip_phones"))
       .limit(1);
-    const vipPhones: string[] = vipPhonesSetting.length > 0 
-      ? JSON.parse(vipPhonesSetting[0].value) 
-      : [];
+    const vipPhones: string[] =
+      vipPhonesSetting.length > 0 ? JSON.parse(vipPhonesSetting[0].value) : [];
 
-    const thresholdSetting = await db.select()
+    const thresholdSetting = await db
+      .select()
       .from(schema.siteSettings)
       .where(eq(schema.siteSettings.key, "vip_threshold"))
       .limit(1);
-    const vipThreshold = thresholdSetting.length > 0 
-      ? parseInt(thresholdSetting[0].value) 
-      : 50 * 1000 * 1000; // 50 million tomans default representation
+    const vipThreshold =
+      thresholdSetting.length > 0
+        ? parseInt(thresholdSetting[0].value)
+        : 50 * 1000 * 1000; // 50 million tomans default representation
 
     // Group orders by customer_phone
-    const customerMap = new Map<string, {
-      phone: string;
-      name: string;
-      city: string;
-      totalOrders: number;
-      totalSpent: number;
-      latestOrderDate: string;
-      isManualVip: boolean;
-      autoEligible: boolean;
-    }>();
+    const customerMap = new Map<
+      string,
+      {
+        phone: string;
+        name: string;
+        city: string;
+        totalOrders: number;
+        totalSpent: number;
+        latestOrderDate: string;
+        isManualVip: boolean;
+        autoEligible: boolean;
+      }
+    >();
 
     for (const order of allOrders) {
       const phone = order.customerPhone.trim();
       if (!phone) continue;
       const existing = customerMap.get(phone);
-      
+
       const orderPrice = order.agreedPrice || 0;
       // count spent if CONFIRMED or DELIVERED, or count all inquiries as potential
-      const isConfirmedPurchase = ["CONFIRMED", "DELIVERED"].includes(order.status);
+      const isConfirmedPurchase = ["CONFIRMED", "DELIVERED"].includes(
+        order.status,
+      );
       const spentToAdd = isConfirmedPurchase ? orderPrice : 0;
 
       if (existing) {
@@ -652,21 +852,27 @@ app.get("/api/admin/customers", async (req, res) => {
           city: order.customerCity,
           totalOrders: 1,
           totalSpent: spentToAdd,
-          latestOrderDate: order.createdAt ? new Date(order.createdAt).toISOString() : new Date().toISOString(),
+          latestOrderDate: order.createdAt
+            ? new Date(order.createdAt).toISOString()
+            : new Date().toISOString(),
           isManualVip: vipPhones.includes(phone),
           autoEligible: false, // will check below
         });
       }
     }
 
-    const customersList = Array.from(customerMap.values()).map(c => {
+    const customersList = Array.from(customerMap.values()).map((c) => {
       c.autoEligible = c.totalSpent >= vipThreshold;
 
       // Look for orders containing `[کد معرف: phone]`
       const refCode = `[کد معرف: ${c.phone}]`;
-      const referredOrders = allOrders.filter(o => o.customerMessage && o.customerMessage.includes(refCode));
+      const referredOrders = allOrders.filter(
+        (o) => o.customerMessage && o.customerMessage.includes(refCode),
+      );
       const referralsCount = referredOrders.length;
-      const successfulReferrals = referredOrders.filter(o => ["CONFIRMED", "DELIVERED"].includes(o.status)).length;
+      const successfulReferrals = referredOrders.filter((o) =>
+        ["CONFIRMED", "DELIVERED"].includes(o.status),
+      ).length;
       const referralEarning = successfulReferrals * 250000;
 
       return {
@@ -674,15 +880,15 @@ app.get("/api/admin/customers", async (req, res) => {
         isVip: c.isManualVip || c.autoEligible,
         referralsCount,
         successfulReferrals,
-        referralEarning
+        referralEarning,
       };
     });
 
-    return res.json({ 
-      success: true, 
-      customers: customersList, 
-      vipThreshold, 
-      vipPhonesCount: vipPhones.length 
+    return res.json({
+      success: true,
+      customers: customersList,
+      vipThreshold,
+      vipPhonesCount: vipPhones.length,
     });
   } catch (error: any) {
     console.error("Customers fetch error:", error);
@@ -695,18 +901,20 @@ app.post("/api/admin/customers/vip", async (req, res) => {
     const db = getDb();
     const { phone, isVip } = req.body;
     if (!phone) {
-      return res.status(400).json({ success: false, error: "شماره تلفن الزامی است." });
+      return res
+        .status(400)
+        .json({ success: false, error: "شماره تلفن الزامی است." });
     }
 
     // Fetch existing vip_phones list
-    const foundSetting = await db.select()
+    const foundSetting = await db
+      .select()
       .from(schema.siteSettings)
       .where(eq(schema.siteSettings.key, "vip_phones"))
       .limit(1);
 
-    let vipPhones: string[] = foundSetting.length > 0 
-      ? JSON.parse(foundSetting[0].value) 
-      : [];
+    let vipPhones: string[] =
+      foundSetting.length > 0 ? JSON.parse(foundSetting[0].value) : [];
 
     const cleanPhone = phone.trim();
     if (isVip) {
@@ -714,24 +922,30 @@ app.post("/api/admin/customers/vip", async (req, res) => {
         vipPhones.push(cleanPhone);
       }
     } else {
-      vipPhones = vipPhones.filter(p => p !== cleanPhone);
+      vipPhones = vipPhones.filter((p) => p !== cleanPhone);
     }
 
     const valueStr = JSON.stringify(vipPhones);
 
     if (foundSetting.length > 0) {
-      await db.update(schema.siteSettings)
+      await db
+        .update(schema.siteSettings)
         .set({ value: valueStr, updatedAt: new Date() })
         .where(eq(schema.siteSettings.key, "vip_phones"));
     } else {
       await db.insert(schema.siteSettings).values({
         key: "vip_phones",
         value: valueStr,
-        updatedAt: new Date()
+        updatedAt: new Date(),
       });
     }
 
-    return res.json({ success: true, phone: cleanPhone, isVip, vipPhonesCount: vipPhones.length });
+    return res.json({
+      success: true,
+      phone: cleanPhone,
+      isVip,
+      vipPhonesCount: vipPhones.length,
+    });
   } catch (error: any) {
     console.error("VIP status update error:", error);
     return res.status(500).json({ success: false, error: error.message });
@@ -743,10 +957,13 @@ app.post("/api/admin/customers/vip-threshold", async (req, res) => {
     const db = getDb();
     const { threshold } = req.body;
     if (threshold === undefined) {
-      return res.status(400).json({ success: false, error: "مقدار حد نصاب الزامی است" });
+      return res
+        .status(400)
+        .json({ success: false, error: "مقدار حد نصاب الزامی است" });
     }
 
-    const foundSetting = await db.select()
+    const foundSetting = await db
+      .select()
       .from(schema.siteSettings)
       .where(eq(schema.siteSettings.key, "vip_threshold"))
       .limit(1);
@@ -754,14 +971,15 @@ app.post("/api/admin/customers/vip-threshold", async (req, res) => {
     const valStr = String(threshold);
 
     if (foundSetting.length > 0) {
-      await db.update(schema.siteSettings)
+      await db
+        .update(schema.siteSettings)
         .set({ value: valStr, updatedAt: new Date() })
         .where(eq(schema.siteSettings.key, "vip_threshold"));
     } else {
       await db.insert(schema.siteSettings).values({
         key: "vip_threshold",
         value: valStr,
-        updatedAt: new Date()
+        updatedAt: new Date(),
       });
     }
 
@@ -772,7 +990,6 @@ app.post("/api/admin/customers/vip-threshold", async (req, res) => {
   }
 });
 
-
 // In-Memory SMS OTP Storage for Production & Testing Handshakes
 const otpStore = new Map<string, { code: string; expiresAt: number }>();
 
@@ -781,12 +998,15 @@ app.post("/api/customer/send-otp", async (req, res) => {
     const db = getDb();
     const { phone } = req.body;
     if (!phone) {
-      return res.status(400).json({ success: false, error: "شماره همراه ارسال نشده است" });
+      return res
+        .status(400)
+        .json({ success: false, error: "شماره همراه ارسال نشده است" });
     }
     const cleanPhone = phone.trim();
 
     // Check if phone has any active orders or matches customer list
-    const customerOrders = await db.select()
+    const customerOrders = await db
+      .select()
       .from(schema.orders)
       .where(eq(schema.orders.customerPhone, cleanPhone))
       .limit(1);
@@ -794,7 +1014,8 @@ app.post("/api/customer/send-otp", async (req, res) => {
     if (customerOrders.length === 0) {
       return res.status(400).json({
         success: false,
-        error: "شماره همراه شما در سیستم باشگاه مبل یافت نشد. لطفاً شماره‌ای را وارد کنید که در هنگام خرید مبل فاکتور کرده‌اید."
+        error:
+          "شماره همراه شما در سیستم باشگاه مبل یافت نشد. لطفاً شماره‌ای را وارد کنید که در هنگام خرید مبل فاکتور کرده‌اید.",
       });
     }
 
@@ -804,15 +1025,17 @@ app.post("/api/customer/send-otp", async (req, res) => {
     // Store in memory with 3 minutes expiration
     otpStore.set(cleanPhone, {
       code: otpCode,
-      expiresAt: Date.now() + 3 * 60 * 1000
+      expiresAt: Date.now() + 3 * 60 * 1000,
     });
 
-    console.log(`[SMS OTP SIMULATION] SMS Sent to ${cleanPhone}. CODE: ${otpCode}`);
+    console.log(
+      `[SMS OTP SIMULATION] SMS Sent to ${cleanPhone}. CODE: ${otpCode}`,
+    );
 
     return res.json({
       success: true,
       message: "کد تایید پیامکی با موفقیت ارسال شد.",
-      otpCode // Returning debug code for seamless live preview simulation
+      otpCode, // Returning debug code for seamless live preview simulation
     });
   } catch (error: any) {
     console.error("SMS OTP Send error:", error);
@@ -825,7 +1048,12 @@ app.post("/api/customer/verify-otp", async (req, res) => {
     const db = getDb();
     const { phone, code } = req.body;
     if (!phone || !code) {
-      return res.status(400).json({ success: false, error: "شماره همراه یا کد تایید ارسال نشده است" });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          error: "شماره همراه یا کد تایید ارسال نشده است",
+        });
     }
 
     const cleanPhone = phone.trim();
@@ -833,51 +1061,69 @@ app.post("/api/customer/verify-otp", async (req, res) => {
 
     const record = otpStore.get(cleanPhone);
     if (!record) {
-      return res.status(400).json({ success: false, error: "کد تاییدی صادر نشده یا منقضی شده است. لطفا مجدد درخواست پیامکی ارسال کنید." });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          error:
+            "کد تاییدی صادر نشده یا منقضی شده است. لطفا مجدد درخواست پیامکی ارسال کنید.",
+        });
     }
 
     if (Date.now() > record.expiresAt) {
       otpStore.delete(cleanPhone);
-      return res.status(400).json({ success: false, error: "کد تایید منقضی شده است. لطفا مجدد درخواست پیامکی ارسال کنید." });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          error: "کد تایید منقضی شده است. لطفا مجدد درخواست پیامکی ارسال کنید.",
+        });
     }
 
     if (record.code !== cleanCode) {
-      return res.status(400).json({ success: false, error: "کد تایید وارد شده نادرست است." });
+      return res
+        .status(400)
+        .json({ success: false, error: "کد تایید وارد شده نادرست است." });
     }
 
     // OTP verified successfully! Delete to prevent reuse
     otpStore.delete(cleanPhone);
 
     // Prepare full member profile payload
-    const customerOrders = await db.select()
+    const customerOrders = await db
+      .select()
       .from(schema.orders)
       .where(eq(schema.orders.customerPhone, cleanPhone))
       .orderBy(desc(schema.orders.createdAt));
 
     // Get VIP system settings
-    const vipPhonesSetting = await db.select()
+    const vipPhonesSetting = await db
+      .select()
       .from(schema.siteSettings)
       .where(eq(schema.siteSettings.key, "vip_phones"))
       .limit(1);
-    const vipPhones: string[] = vipPhonesSetting.length > 0
-      ? JSON.parse(vipPhonesSetting[0].value)
-      : [];
+    const vipPhones: string[] =
+      vipPhonesSetting.length > 0 ? JSON.parse(vipPhonesSetting[0].value) : [];
 
-    const thresholdSetting = await db.select()
+    const thresholdSetting = await db
+      .select()
       .from(schema.siteSettings)
       .where(eq(schema.siteSettings.key, "vip_threshold"))
       .limit(1);
-    const vipThreshold = thresholdSetting.length > 0
-      ? parseInt(thresholdSetting[0].value)
-      : 50 * 1000 * 1000;
+    const vipThreshold =
+      thresholdSetting.length > 0
+        ? parseInt(thresholdSetting[0].value)
+        : 50 * 1000 * 1000;
 
     let totalSpentValue = 0;
     let mostRecentName = "";
     let mostRecentCity = "";
 
     for (const order of customerOrders) {
-      if (!mostRecentName && order.customerName) mostRecentName = order.customerName;
-      if (!mostRecentCity && order.customerCity) mostRecentCity = order.customerCity;
+      if (!mostRecentName && order.customerName)
+        mostRecentName = order.customerName;
+      if (!mostRecentCity && order.customerCity)
+        mostRecentCity = order.customerCity;
       if (["CONFIRMED", "DELIVERED"].includes(order.status)) {
         totalSpentValue += order.agreedPrice || 0;
       }
@@ -887,28 +1133,32 @@ app.post("/api/customer/verify-otp", async (req, res) => {
     const isAutoVip = totalSpentValue >= vipThreshold;
     const isVip = isManualVip || isAutoVip;
 
-    const productIds = customerOrders.map(o => o.productId);
+    const productIds = customerOrders.map((o) => o.productId);
     let resolvedProducts: any[] = [];
     if (productIds.length > 0) {
-      resolvedProducts = await db.select()
+      resolvedProducts = await db
+        .select()
         .from(schema.products)
         .where(inArray(schema.products.id, productIds));
     }
 
-    const ordersWithProducts = customerOrders.map(order => {
-      const prod = resolvedProducts.find(p => p.id === order.productId);
+    const ordersWithProducts = customerOrders.map((order) => {
+      const prod = resolvedProducts.find((p) => p.id === order.productId);
       return { ...order, product: prod || null };
     });
 
     const rewardPoints = Math.floor(totalSpentValue / 1000000);
 
-    const referralOrders = await db.select()
+    const referralOrders = await db
+      .select()
       .from(schema.orders)
       .where(like(schema.orders.customerMessage, `%[کد معرف: ${cleanPhone}]%`))
       .orderBy(desc(schema.orders.createdAt));
 
     const totalReferrals = referralOrders.length;
-    const successfulReferrals = referralOrders.filter(o => ["CONFIRMED", "DELIVERED"].includes(o.status)).length;
+    const successfulReferrals = referralOrders.filter((o) =>
+      ["CONFIRMED", "DELIVERED"].includes(o.status),
+    ).length;
     const referralEarning = successfulReferrals * 250000;
 
     return res.json({
@@ -925,9 +1175,9 @@ app.post("/api/customer/verify-otp", async (req, res) => {
         nextRankRemaining: Math.max(0, vipThreshold - totalSpentValue),
         totalReferrals,
         successfulReferrals,
-        referralEarning
+        referralEarning,
       },
-      orders: ordersWithProducts
+      orders: ordersWithProducts,
     });
   } catch (error: any) {
     console.error("SMS OTP Verify error:", error);
@@ -935,46 +1185,51 @@ app.post("/api/customer/verify-otp", async (req, res) => {
   }
 });
 
-
 app.post("/api/customer/portal", async (req, res) => {
   try {
     const db = getDb();
     const { phone } = req.body;
     if (!phone) {
-      return res.status(400).json({ success: false, error: "وارد کردن شماره همراه الزامی است" });
+      return res
+        .status(400)
+        .json({ success: false, error: "وارد کردن شماره همراه الزامی است" });
     }
 
     const cleanPhone = phone.trim();
 
     // Fetch all orders for this buyer phone number
-    const customerOrders = await db.select()
+    const customerOrders = await db
+      .select()
       .from(schema.orders)
       .where(eq(schema.orders.customerPhone, cleanPhone))
       .orderBy(desc(schema.orders.createdAt));
 
     if (customerOrders.length === 0) {
-      return res.status(404).json({ 
-        success: false, 
-        error: "خریدار یا درخواستی با این شماره یافت نشد. حتما با شماره‌ای وارد شوید که سفارش خود را ثبت کرده‌اید." 
+      return res.status(404).json({
+        success: false,
+        error:
+          "خریدار یا درخواستی با این شماره یافت نشد. حتما با شماره‌ای وارد شوید که سفارش خود را ثبت کرده‌اید.",
       });
     }
 
     // Get VIP system settings
-    const vipPhonesSetting = await db.select()
+    const vipPhonesSetting = await db
+      .select()
       .from(schema.siteSettings)
       .where(eq(schema.siteSettings.key, "vip_phones"))
       .limit(1);
-    const vipPhones: string[] = vipPhonesSetting.length > 0
-      ? JSON.parse(vipPhonesSetting[0].value)
-      : [];
+    const vipPhones: string[] =
+      vipPhonesSetting.length > 0 ? JSON.parse(vipPhonesSetting[0].value) : [];
 
-    const thresholdSetting = await db.select()
+    const thresholdSetting = await db
+      .select()
       .from(schema.siteSettings)
       .where(eq(schema.siteSettings.key, "vip_threshold"))
       .limit(1);
-    const vipThreshold = thresholdSetting.length > 0
-      ? parseInt(thresholdSetting[0].value)
-      : 50 * 1000 * 1000;
+    const vipThreshold =
+      thresholdSetting.length > 0
+        ? parseInt(thresholdSetting[0].value)
+        : 50 * 1000 * 1000;
 
     // Calculate customer metrics
     let totalOrdersCount = customerOrders.length;
@@ -983,8 +1238,10 @@ app.post("/api/customer/portal", async (req, res) => {
     let mostRecentCity = "";
 
     for (const order of customerOrders) {
-      if (!mostRecentName && order.customerName) mostRecentName = order.customerName;
-      if (!mostRecentCity && order.customerCity) mostRecentCity = order.customerCity;
+      if (!mostRecentName && order.customerName)
+        mostRecentName = order.customerName;
+      if (!mostRecentCity && order.customerCity)
+        mostRecentCity = order.customerCity;
       if (["CONFIRMED", "DELIVERED"].includes(order.status)) {
         totalSpentValue += order.agreedPrice || 0;
       }
@@ -995,19 +1252,20 @@ app.post("/api/customer/portal", async (req, res) => {
     const isVip = isManualVip || isAutoVip;
 
     // Rich products detail join can be done by fetching products
-    const productIds = customerOrders.map(o => o.productId);
+    const productIds = customerOrders.map((o) => o.productId);
     let resolvedProducts: any[] = [];
     if (productIds.length > 0) {
-      resolvedProducts = await db.select()
+      resolvedProducts = await db
+        .select()
         .from(schema.products)
         .where(inArray(schema.products.id, productIds));
     }
 
-    const ordersWithProducts = customerOrders.map(order => {
-      const prod = resolvedProducts.find(p => p.id === order.productId);
+    const ordersWithProducts = customerOrders.map((order) => {
+      const prod = resolvedProducts.find((p) => p.id === order.productId);
       return {
         ...order,
-        product: prod || null
+        product: prod || null,
       };
     });
 
@@ -1015,13 +1273,16 @@ app.post("/api/customer/portal", async (req, res) => {
     const rewardPoints = Math.floor(totalSpentValue / 1000000);
 
     // Dynamic Referral Stats (Scanning customer messages with safe string lookups)
-    const referralOrders = await db.select()
+    const referralOrders = await db
+      .select()
       .from(schema.orders)
       .where(like(schema.orders.customerMessage, `%[کد معرف: ${cleanPhone}]%`))
       .orderBy(desc(schema.orders.createdAt));
 
     const totalReferrals = referralOrders.length;
-    const successfulReferrals = referralOrders.filter(o => ["CONFIRMED", "DELIVERED"].includes(o.status)).length;
+    const successfulReferrals = referralOrders.filter((o) =>
+      ["CONFIRMED", "DELIVERED"].includes(o.status),
+    ).length;
     const referralEarning = successfulReferrals * 250000; // 250k Toman discount/bonus credit per successful conversion
 
     return res.json({
@@ -1038,16 +1299,15 @@ app.post("/api/customer/portal", async (req, res) => {
         nextRankRemaining: Math.max(0, vipThreshold - totalSpentValue),
         totalReferrals,
         successfulReferrals,
-        referralEarning
+        referralEarning,
       },
-      orders: ordersWithProducts
+      orders: ordersWithProducts,
     });
   } catch (error: any) {
     console.error("Customer Portal API error:", error);
     return res.status(500).json({ success: false, error: error.message });
   }
 });
-
 
 // SOCIAL LOGIN ENDPOINTS
 app.post("/api/customer/social-login", async (req, res) => {
@@ -1056,17 +1316,20 @@ app.post("/api/customer/social-login", async (req, res) => {
     const { provider, providerId, email, name } = req.body;
 
     if (!provider || !providerId) {
-      return res.status(400).json({ success: false, error: "اطلاعات حساب کاربری ناقص است" });
+      return res
+        .status(400)
+        .json({ success: false, error: "اطلاعات حساب کاربری ناقص است" });
     }
 
     // Try finding existing connection
-    const existingConnections = await db.select()
+    const existingConnections = await db
+      .select()
       .from(schema.customerConnections)
       .where(
         and(
           eq(schema.customerConnections.provider, provider),
-          eq(schema.customerConnections.providerId, providerId)
-        )
+          eq(schema.customerConnections.providerId, providerId),
+        ),
       )
       .limit(1);
 
@@ -1083,8 +1346,9 @@ app.post("/api/customer/social-login", async (req, res) => {
         email: email || "",
         name: name || "",
       });
-      
-      const freshlyCreated = await db.select()
+
+      const freshlyCreated = await db
+        .select()
         .from(schema.customerConnections)
         .where(eq(schema.customerConnections.id, newId))
         .limit(1);
@@ -1094,7 +1358,8 @@ app.post("/api/customer/social-login", async (req, res) => {
     // If connection already has a linked phone:
     if (connection.phone) {
       const cleanPhone = connection.phone.trim();
-      const customerOrders = await db.select()
+      const customerOrders = await db
+        .select()
         .from(schema.orders)
         .where(eq(schema.orders.customerPhone, cleanPhone))
         .orderBy(desc(schema.orders.createdAt));
@@ -1104,53 +1369,67 @@ app.post("/api/customer/social-login", async (req, res) => {
       let mostRecentCity = "";
 
       for (const order of customerOrders) {
-        if (!mostRecentName && order.customerName) mostRecentName = order.customerName;
-        if (!mostRecentCity && order.customerCity) mostRecentCity = order.customerCity;
+        if (!mostRecentName && order.customerName)
+          mostRecentName = order.customerName;
+        if (!mostRecentCity && order.customerCity)
+          mostRecentCity = order.customerCity;
         if (["CONFIRMED", "DELIVERED"].includes(order.status)) {
           totalSpentValue += order.agreedPrice || 0;
         }
       }
 
-      const thresholdSetting = await db.select()
+      const thresholdSetting = await db
+        .select()
         .from(schema.siteSettings)
         .where(eq(schema.siteSettings.key, "vip_threshold"))
         .limit(1);
-      const vipThreshold = thresholdSetting.length > 0
-        ? parseInt(thresholdSetting[0].value)
-        : 50 * 1000 * 1000;
+      const vipThreshold =
+        thresholdSetting.length > 0
+          ? parseInt(thresholdSetting[0].value)
+          : 50 * 1000 * 1000;
 
-      const vipPhonesSetting = await db.select()
+      const vipPhonesSetting = await db
+        .select()
         .from(schema.siteSettings)
         .where(eq(schema.siteSettings.key, "vip_phones"))
         .limit(1);
-      const vipPhones = vipPhonesSetting.length > 0 ? JSON.parse(vipPhonesSetting[0].value) : [];
+      const vipPhones =
+        vipPhonesSetting.length > 0
+          ? JSON.parse(vipPhonesSetting[0].value)
+          : [];
 
       const isManualVip = vipPhones.includes(cleanPhone);
       const isAutoVip = totalSpentValue >= vipThreshold;
       const isVip = isManualVip || isAutoVip;
 
-      const productIds = customerOrders.map(o => o.productId);
+      const productIds = customerOrders.map((o) => o.productId);
       let resolvedProducts: any[] = [];
       if (productIds.length > 0) {
-        resolvedProducts = await db.select()
+        resolvedProducts = await db
+          .select()
           .from(schema.products)
           .where(inArray(schema.products.id, productIds));
       }
 
-      const ordersWithProducts = customerOrders.map(order => {
-        const prod = resolvedProducts.find(p => p.id === order.productId);
+      const ordersWithProducts = customerOrders.map((order) => {
+        const prod = resolvedProducts.find((p) => p.id === order.productId);
         return { ...order, product: prod || null };
       });
 
       const rewardPoints = Math.floor(totalSpentValue / 1000000);
 
-      const referralOrders = await db.select()
+      const referralOrders = await db
+        .select()
         .from(schema.orders)
-        .where(like(schema.orders.customerMessage, `%[کد معرف: ${cleanPhone}]%`))
+        .where(
+          like(schema.orders.customerMessage, `%[کد معرف: ${cleanPhone}]%`),
+        )
         .orderBy(desc(schema.orders.createdAt));
 
       const totalReferrals = referralOrders.length;
-      const successfulReferrals = referralOrders.filter(o => ["CONFIRMED", "DELIVERED"].includes(o.status)).length;
+      const successfulReferrals = referralOrders.filter((o) =>
+        ["CONFIRMED", "DELIVERED"].includes(o.status),
+      ).length;
       const referralEarning = successfulReferrals * 250000;
 
       return res.json({
@@ -1175,9 +1454,9 @@ app.post("/api/customer/social-login", async (req, res) => {
           nextRankRemaining: Math.max(0, vipThreshold - totalSpentValue),
           totalReferrals,
           successfulReferrals,
-          referralEarning
+          referralEarning,
         },
-        orders: ordersWithProducts
+        orders: ordersWithProducts,
       });
     }
 
@@ -1190,8 +1469,8 @@ app.post("/api/customer/social-login", async (req, res) => {
         provider: connection.provider,
         email: connection.email,
         name: connection.name,
-        phone: null
-      }
+        phone: null,
+      },
     });
   } catch (error: any) {
     console.error("Social login API error:", error);
@@ -1205,7 +1484,12 @@ app.post("/api/customer/link-phone", async (req, res) => {
     const { connectionId, phone, code } = req.body;
 
     if (!connectionId || !phone || !code) {
-      return res.status(400).json({ success: false, error: "وارد کردن شماره همراه و کد تایید پیامکی الزامی است" });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          error: "وارد کردن شماره همراه و کد تایید پیامکی الزامی است",
+        });
     }
 
     const cleanPhone = phone.trim();
@@ -1214,46 +1498,64 @@ app.post("/api/customer/link-phone", async (req, res) => {
     // Verify SMS OTP first to secure the linking procedure
     const record = otpStore.get(cleanPhone);
     if (!record) {
-      return res.status(400).json({ success: false, error: "کد تایید این شماره معتبر نیست یا منقضی شده است. مجدداً ارسال کنید." });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          error:
+            "کد تایید این شماره معتبر نیست یا منقضی شده است. مجدداً ارسال کنید.",
+        });
     }
 
     if (Date.now() > record.expiresAt) {
       otpStore.delete(cleanPhone);
-      return res.status(400).json({ success: false, error: "زمان ورود کد تایید سپری شده است." });
+      return res
+        .status(400)
+        .json({ success: false, error: "زمان ورود کد تایید سپری شده است." });
     }
 
     if (record.code !== cleanCode) {
-      return res.status(400).json({ success: false, error: "کد تایید پیامکی وارد شده نادرست است." });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          error: "کد تایید پیامکی وارد شده نادرست است.",
+        });
     }
 
     // OTP succeeded!
     otpStore.delete(cleanPhone);
 
     // Check if phone has any orders or leads
-    const customerOrders = await db.select()
+    const customerOrders = await db
+      .select()
       .from(schema.orders)
       .where(eq(schema.orders.customerPhone, cleanPhone))
       .limit(1);
 
     if (customerOrders.length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        error: "خریدار یا سفارشی با این شماره همراه یافت نشد. برای اتصال، شماره‌ای را بنویسید که در هنگام خرید مبل در سیستم فاکتور ثبت شده است." 
+      return res.status(400).json({
+        success: false,
+        error:
+          "خریدار یا سفارشی با این شماره همراه یافت نشد. برای اتصال، شماره‌ای را بنویسید که در هنگام خرید مبل در سیستم فاکتور ثبت شده است.",
       });
     }
 
     // Update connection phone
-    await db.update(schema.customerConnections)
+    await db
+      .update(schema.customerConnections)
       .set({ phone: cleanPhone, updatedAt: new Date() })
       .where(eq(schema.customerConnections.id, connectionId));
 
-    return res.json({ success: true, message: "حساب کاربری با موفقیت به باشگاه مشتریان متصل شد" });
+    return res.json({
+      success: true,
+      message: "حساب کاربری با موفقیت به باشگاه مشتریان متصل شد",
+    });
   } catch (error: any) {
     console.error("Link phone API error:", error);
     return res.status(500).json({ success: false, error: error.message });
   }
 });
-
 
 // -----------------------------------------------------------------------------
 // ADMIN DASHBOARD & FINANCE SUMMARY
@@ -1262,42 +1564,55 @@ app.post("/api/customer/link-phone", async (req, res) => {
 app.get("/api/admin/dashboard", async (req, res) => {
   try {
     const db = getDb();
-    
-    const allOrders = await db.select({
-      id: schema.orders.id,
-      status: schema.orders.status,
-      customerCity: schema.orders.customerCity,
-      customerName: schema.orders.customerName,
-      customerPhone: schema.orders.customerPhone,
-      createdAt: schema.orders.createdAt,
-      agreedPrice: schema.orders.agreedPrice,
-      commissionAmount: schema.orders.commissionAmount,
-      commissionPaid: schema.orders.commissionPaid,
-      productId: schema.orders.productId,
-      showroomId: schema.orders.showroomId,
-      productName: schema.products.name,
-      showroomName: schema.showrooms.name,
-    })
-    .from(schema.orders)
-    .innerJoin(schema.products, eq(schema.orders.productId, schema.products.id))
-    .innerJoin(schema.showrooms, eq(schema.orders.showroomId, schema.showrooms.id));
+
+    const allOrders = await db
+      .select({
+        id: schema.orders.id,
+        status: schema.orders.status,
+        customerCity: schema.orders.customerCity,
+        customerName: schema.orders.customerName,
+        customerPhone: schema.orders.customerPhone,
+        createdAt: schema.orders.createdAt,
+        agreedPrice: schema.orders.agreedPrice,
+        commissionAmount: schema.orders.commissionAmount,
+        commissionPaid: schema.orders.commissionPaid,
+        productId: schema.orders.productId,
+        showroomId: schema.orders.showroomId,
+        productName: schema.products.name,
+        showroomName: schema.showrooms.name,
+      })
+      .from(schema.orders)
+      .innerJoin(
+        schema.products,
+        eq(schema.orders.productId, schema.products.id),
+      )
+      .innerJoin(
+        schema.showrooms,
+        eq(schema.orders.showroomId, schema.showrooms.id),
+      );
 
     const totalOrdersCount = allOrders.length;
-    
+
     // 1. Live Calculations
     const today = new Date();
-    today.setHours(0,0,0,0);
-    const todayOrdersCount = allOrders.filter(o => new Date(o.createdAt) >= today).length;
-    const pendingCount = allOrders.filter(o => o.status === "PENDING").length;
+    today.setHours(0, 0, 0, 0);
+    const todayOrdersCount = allOrders.filter(
+      (o) => new Date(o.createdAt) >= today,
+    ).length;
+    const pendingCount = allOrders.filter((o) => o.status === "PENDING").length;
 
     // Commission Metrics
     let totalCommissionMonth = 0;
     let earnedCommissionPaid = 0;
     let earnedCommissionUnpaid = 0;
 
-    const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const currentMonthStart = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      1,
+    );
 
-    allOrders.forEach(o => {
+    allOrders.forEach((o) => {
       const amt = Number(o.commissionAmount) || 0;
       if (amt > 0) {
         if (new Date(o.createdAt) >= currentMonthStart) {
@@ -1317,10 +1632,20 @@ app.get("/api/admin/dashboard", async (req, res) => {
       const d = new Date();
       d.setDate(today.getDate() - i);
       const startOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-      const endOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59);
-      
-      const dayLabel = d.toLocaleDateString("fa-IR", { day: "numeric", month: "short" });
-      const ordersInDay = allOrders.filter(o => {
+      const endOfDay = new Date(
+        d.getFullYear(),
+        d.getMonth(),
+        d.getDate(),
+        23,
+        59,
+        59,
+      );
+
+      const dayLabel = d.toLocaleDateString("fa-IR", {
+        day: "numeric",
+        month: "short",
+      });
+      const ordersInDay = allOrders.filter((o) => {
         const cDate = new Date(o.createdAt);
         return cDate >= startOfDay && cDate <= endOfDay;
       }).length;
@@ -1333,7 +1658,7 @@ app.get("/api/admin/dashboard", async (req, res) => {
 
     // Recent orders table
     const recentOrders = [...allOrders]
-      .sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
       .slice(0, 5);
 
     return res.json({
@@ -1354,7 +1679,6 @@ app.get("/api/admin/dashboard", async (req, res) => {
   }
 });
 
-
 // -----------------------------------------------------------------------------
 // COMMISSION REPORT API
 // -----------------------------------------------------------------------------
@@ -1365,25 +1689,27 @@ app.get("/api/admin/commissions", async (req, res) => {
 app.get("/api/admin/commissions-report", async (req, res) => {
   try {
     const db = getDb();
-    
+
     // Fetch showrooms, orders & commissions details
     const allShowrooms = await db.select().from(schema.showrooms);
-    const allOrders = await db.select({
-      id: schema.orders.id,
-      agreedPrice: schema.orders.agreedPrice,
-      commissionAmount: schema.orders.commissionAmount,
-      commissionPaid: schema.orders.commissionPaid,
-      showroomId: schema.orders.showroomId,
-    }).from(schema.orders);
+    const allOrders = await db
+      .select({
+        id: schema.orders.id,
+        agreedPrice: schema.orders.agreedPrice,
+        commissionAmount: schema.orders.commissionAmount,
+        commissionPaid: schema.orders.commissionPaid,
+        showroomId: schema.orders.showroomId,
+      })
+      .from(schema.orders);
 
-    const report = allShowrooms.map(sr => {
-      const sOrders = allOrders.filter(o => o.showroomId === sr.id);
-      
+    const report = allShowrooms.map((sr) => {
+      const sOrders = allOrders.filter((o) => o.showroomId === sr.id);
+
       let totalCommission = 0;
       let paidCommission = 0;
       let unpaidCommission = 0;
 
-      sOrders.forEach(o => {
+      sOrders.forEach((o) => {
         const amt = Number(o.commissionAmount) || 0;
         totalCommission += amt;
         if (o.commissionPaid) {
@@ -1406,24 +1732,31 @@ app.get("/api/admin/commissions-report", async (req, res) => {
     });
 
     // Detailed transactions
-    const detailedList = await db.select({
-      id: schema.commissions.id,
-      orderId: schema.commissions.orderId,
-      amount: schema.commissions.amount,
-      rateUsed: schema.commissions.rateUsed,
-      isPaid: schema.commissions.isPaid,
-      paidAt: schema.commissions.paidAt,
-      paymentMethod: schema.commissions.paymentMethod,
-      notes: schema.commissions.notes,
-      createdAt: schema.commissions.createdAt,
-      customerName: schema.orders.customerName,
-      customerPhone: schema.orders.customerPhone,
-      showroomName: schema.showrooms.name,
-    })
-    .from(schema.commissions)
-    .innerJoin(schema.orders, eq(schema.commissions.orderId, schema.orders.id))
-    .innerJoin(schema.showrooms, eq(schema.commissions.showroomId, schema.showrooms.id))
-    .orderBy(desc(schema.commissions.createdAt));
+    const detailedList = await db
+      .select({
+        id: schema.commissions.id,
+        orderId: schema.commissions.orderId,
+        amount: schema.commissions.amount,
+        rateUsed: schema.commissions.rateUsed,
+        isPaid: schema.commissions.isPaid,
+        paidAt: schema.commissions.paidAt,
+        paymentMethod: schema.commissions.paymentMethod,
+        notes: schema.commissions.notes,
+        createdAt: schema.commissions.createdAt,
+        customerName: schema.orders.customerName,
+        customerPhone: schema.orders.customerPhone,
+        showroomName: schema.showrooms.name,
+      })
+      .from(schema.commissions)
+      .innerJoin(
+        schema.orders,
+        eq(schema.commissions.orderId, schema.orders.id),
+      )
+      .innerJoin(
+        schema.showrooms,
+        eq(schema.commissions.showroomId, schema.showrooms.id),
+      )
+      .orderBy(desc(schema.commissions.createdAt));
 
     return res.json({ success: true, report, transactions: detailedList });
   } catch (error: any) {
@@ -1431,32 +1764,34 @@ app.get("/api/admin/commissions-report", async (req, res) => {
   }
 });
 
-
 // -----------------------------------------------------------------------------
 // DYNAMIC SITE SETTINGS API
 // -----------------------------------------------------------------------------
 const DEFAULT_SETTINGS: Record<string, string> = {
   about_title: "درباره گالری مبلمان مدرن هوم",
-  about_desc: "ما محصول عینی نمی‌فروشیم — ما حلقه ارتباطی امن و وکیل شما با نمایشگا‌ه‌های ممتاز مبلمان کشور هستیم.",
-  about_content: "در مدل سنتی خرید مبل، مشتریان معمولاً با چالش‌های بزرگی نظیر قیمت‌های نامتعادل دلالان، تنوع پایین، تحویل دیرهنگام و عدم همخوانی متریال اسفنج کلاف و چوب با ادعای فروشنده مواجه می‌شوند.\n\nپلتفرم مدرن هوم به عنوان مرجع تخصصی دکوراسیون، این خلأ را به شیوه‌ای مدرن پوشش می‌دهد. ما با بیش از ۲۵ کارگاه مبل‌سازی و نمایشگاه‌های برند مبل در بازارهای تخصصی ایران از جمله یافت‌آباد، دلاوران و جاجرود هماهنگ هستیم.",
-  contact_address: "تهران، بازار مبل یافت‌آباد غربی، بلوار معلم، ساختمان دیزاین فضا، پلاک ۱۸۰، طبقه ۳",
+  about_desc:
+    "ما محصول عینی نمی‌فروشیم — ما حلقه ارتباطی امن و وکیل شما با نمایشگا‌ه‌های ممتاز مبلمان کشور هستیم.",
+  about_content:
+    "در مدل سنتی خرید مبل، مشتریان معمولاً با چالش‌های بزرگی نظیر قیمت‌های نامتعادل دلالان، تنوع پایین، تحویل دیرهنگام و عدم همخوانی متریال اسفنج کلاف و چوب با ادعای فروشنده مواجه می‌شوند.\n\nپلتفرم مدرن هوم به عنوان مرجع تخصصی دکوراسیون، این خلأ را به شیوه‌ای مدرن پوشش می‌دهد. ما با بیش از ۲۵ کارگاه مبل‌سازی و نمایشگاه‌های برند مبل در بازارهای تخصصی ایران از جمله یافت‌آباد، دلاوران و جاجرود هماهنگ هستیم.",
+  contact_address:
+    "تهران، بازار مبل یافت‌آباد غربی، بلوار معلم، ساختمان دیزاین فضا، پلاک ۱۸۰، طبقه ۳",
   contact_phone: "۰۲۱-۶۶۵۴۳۲۱۰ / ۰۹۱۲۳۴۵۶۷۸۹",
   contact_email: "management@modern-home.ir",
   instagram: "modern_home_gallery",
   telegram: "modern_home_admin",
-  bale: "@modern_home"
+  bale: "@modern_home",
 };
 
 app.get("/api/settings", async (req, res) => {
   try {
     const db = getDb();
     const rows = await db.select().from(schema.siteSettings);
-    
+
     const settings = { ...DEFAULT_SETTINGS };
     for (const r of rows) {
       settings[r.key] = r.value;
     }
-    
+
     return res.json({ success: true, settings });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
@@ -1467,40 +1802,49 @@ app.post("/api/admin/settings", async (req, res) => {
   try {
     const db = getDb();
     const { settings } = req.body;
-    
+
     if (!settings || typeof settings !== "object") {
-      return res.status(400).json({ success: false, error: "تنظیمات به شکل صحیح فرستاده نشده است." });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          error: "تنظیمات به شکل صحیح فرستاده نشده است.",
+        });
     }
-    
+
     for (const [key, val] of Object.entries(settings)) {
       if (typeof val === "string") {
-        const existing = await db.select().from(schema.siteSettings).where(eq(schema.siteSettings.key, key)).limit(1);
+        const existing = await db
+          .select()
+          .from(schema.siteSettings)
+          .where(eq(schema.siteSettings.key, key))
+          .limit(1);
         if (existing.length > 0) {
-          await db.update(schema.siteSettings)
+          await db
+            .update(schema.siteSettings)
             .set({ value: val, updatedAt: new Date() })
             .where(eq(schema.siteSettings.key, key));
         } else {
           await db.insert(schema.siteSettings).values({
             key,
             value: val,
-            updatedAt: new Date()
+            updatedAt: new Date(),
           });
         }
       }
     }
-    
+
     const rows = await db.select().from(schema.siteSettings);
     const updatedSettings = { ...DEFAULT_SETTINGS };
     for (const r of rows) {
       updatedSettings[r.key] = r.value;
     }
-    
+
     return res.json({ success: true, settings: updatedSettings });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
   }
 });
-
 
 // -----------------------------------------------------------------------------
 // VITE AND DEVELOPMENT DEV SERVER ENGINE

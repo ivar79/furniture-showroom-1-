@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
-import * as schema from "./schema";
+import * as schema from "./schema.js";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -11,13 +11,19 @@ let dbInstance: any = null;
 
 export function getDb() {
   if (!dbInstance) {
-    const databaseUrl = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || process.env.modernhome_DATABASE_URL;
+    const databaseUrl =
+      process.env.DATABASE_URL ||
+      process.env.NEON_DATABASE_URL ||
+      process.env.modernhome_DATABASE_URL;
 
     let pool;
     if (databaseUrl) {
       pool = new Pool({
         connectionString: databaseUrl,
-        ssl: databaseUrl.includes("neon.tech") || databaseUrl.includes("sslmode=") ? { rejectUnauthorized: false } : undefined,
+        ssl:
+          databaseUrl.includes("neon.tech") || databaseUrl.includes("sslmode=")
+            ? { rejectUnauthorized: false }
+            : undefined,
       });
     } else {
       const host = process.env.SQL_HOST;
@@ -26,7 +32,9 @@ export function getDb() {
       const password = process.env.SQL_ADMIN_PASSWORD;
 
       if (!host || !database || !user || !password) {
-        throw new Error("Database configuration environment variables are missing.");
+        throw new Error(
+          "Database configuration environment variables are missing.",
+        );
       }
 
       pool = new Pool({

@@ -1,6 +1,6 @@
 import bcryptjs from "bcryptjs";
-import { getDb } from "./index";
-import { admins, showrooms, categories, products } from "./schema";
+import { getDb } from "./index.js";
+import { admins, showrooms, categories, products } from "./schema.js";
 import { eq } from "drizzle-orm";
 
 export async function runSeed() {
@@ -33,10 +33,34 @@ export async function runSeed() {
     if (existingCategories.length === 0) {
       console.log("Seeding categories...");
       const cats = [
-        { name: "کاناپه لوکس", slug: "sofa", sortOrder: 1, image: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=500&auto=format&fit=crop&q=80" },
-        { name: "مبل راحتی", slug: "comfort-sofa", sortOrder: 2, image: "https://images.unsplash.com/photo-1484101403633-562f891dc89a?w=500&auto=format&fit=crop&q=80" },
-        { name: "میز مدرن", slug: "table", sortOrder: 3, image: "https://images.unsplash.com/photo-1533090161767-e6ffed986c88?w=500&auto=format&fit=crop&q=80" },
-        { name: "سرویس خواب", slug: "bedroom-set", sortOrder: 4, image: "https://images.unsplash.com/photo-1505691938895-1758d7feb511?w=500&auto=format&fit=crop&q=80" },
+        {
+          name: "کاناپه لوکس",
+          slug: "sofa",
+          sortOrder: 1,
+          image:
+            "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=500&auto=format&fit=crop&q=80",
+        },
+        {
+          name: "مبل راحتی",
+          slug: "comfort-sofa",
+          sortOrder: 2,
+          image:
+            "https://images.unsplash.com/photo-1484101403633-562f891dc89a?w=500&auto=format&fit=crop&q=80",
+        },
+        {
+          name: "میز مدرن",
+          slug: "table",
+          sortOrder: 3,
+          image:
+            "https://images.unsplash.com/photo-1533090161767-e6ffed986c88?w=500&auto=format&fit=crop&q=80",
+        },
+        {
+          name: "سرویس خواب",
+          slug: "bedroom-set",
+          sortOrder: 4,
+          image:
+            "https://images.unsplash.com/photo-1505691938895-1758d7feb511?w=500&auto=format&fit=crop&q=80",
+        },
       ];
 
       for (const cat of cats) {
@@ -50,9 +74,11 @@ export async function runSeed() {
     } else {
       const allCats = await db.select().from(categories);
       sofaCategoryId = allCats.find((c: any) => c.slug === "sofa")?.id || "";
-      comfortSofaCategoryId = allCats.find((c: any) => c.slug === "comfort-sofa")?.id || "";
+      comfortSofaCategoryId =
+        allCats.find((c: any) => c.slug === "comfort-sofa")?.id || "";
       tableCategoryId = allCats.find((c: any) => c.slug === "table")?.id || "";
-      bedroomCategoryId = allCats.find((c: any) => c.slug === "bedroom-set")?.id || "";
+      bedroomCategoryId =
+        allCats.find((c: any) => c.slug === "bedroom-set")?.id || "";
     }
 
     // 3. Check and Seed Showrooms
@@ -62,35 +88,45 @@ export async function runSeed() {
 
     if (existingShowrooms.length === 0) {
       console.log("Seeding showrooms...");
-      const afra = await db.insert(showrooms).values({
-        name: "نمایشگاه مبل افرا",
-        city: "تهران",
-        contactPhone: "09123456789",
-        contactName: "علیرضا رضایی",
-        commissionRate: "10.00",
-        address: "تهران، بازار مبل یافت‌آباد، خیابان فلان، پلاک ۴۰",
-        notes: "یکی از بزرگترین نمایشگاه‌های مبل کلاسیک تهران با کیفیت ممتاز",
-        isActive: true,
-      }).returning();
+      const afra = await db
+        .insert(showrooms)
+        .values({
+          name: "نمایشگاه مبل افرا",
+          city: "تهران",
+          contactPhone: "09123456789",
+          contactName: "علیرضا رضایی",
+          commissionRate: "10.00",
+          address: "تهران، بازار مبل یافت‌آباد، خیابان فلان، پلاک ۴۰",
+          notes: "یکی از بزرگترین نمایشگاه‌های مبل کلاسیک تهران با کیفیت ممتاز",
+          isActive: true,
+        })
+        .returning();
       afraShowroomId = afra[0].id;
 
-      const arax = await db.insert(showrooms).values({
-        name: "نمایشگاه مبل آراکس",
-        city: "تبریز",
-        contactPhone: "09149876543",
-        contactName: "مهندس تبریزی",
-        commissionRate: "15.00",
-        address: "تبریز، خیابان آزادی، پاساژ مبل آراکس",
-        notes: "تولیدکننده تخصصی مبل‌های مدرن و کاناپه راحتی با چرم طبیعی درجه یک",
-        isActive: true,
-      }).returning();
+      const arax = await db
+        .insert(showrooms)
+        .values({
+          name: "نمایشگاه مبل آراکس",
+          city: "تبریز",
+          contactPhone: "09149876543",
+          contactName: "مهندس تبریزی",
+          commissionRate: "15.00",
+          address: "تبریز، خیابان آزادی، پاساژ مبل آراکس",
+          notes:
+            "تولیدکننده تخصصی مبل‌های مدرن و کاناپه راحتی با چرم طبیعی درجه یک",
+          isActive: true,
+        })
+        .returning();
       araxShowroomId = arax[0].id;
 
       console.log("Showrooms seeded successfully.");
     } else {
       const allShowrooms = await db.select().from(showrooms);
-      afraShowroomId = allShowrooms.find((s: any) => s.name === "نمایشگاه مبل افرا")?.id || "";
-      araxShowroomId = allShowrooms.find((s: any) => s.name === "نمایشگاه مبل آراکس")?.id || "";
+      afraShowroomId =
+        allShowrooms.find((s: any) => s.name === "نمایشگاه مبل افرا")?.id || "";
+      araxShowroomId =
+        allShowrooms.find((s: any) => s.name === "نمایشگاه مبل آراکس")?.id ||
+        "";
     }
 
     // 4. Check and Seed Products
@@ -101,11 +137,12 @@ export async function runSeed() {
         {
           name: "مبل راحتی چستر لوکس افرا",
           slug: "chesterfield-luxury-sofa",
-          description: "مبل راحتی مدل چستر با کوسن‌های تمام پر، پارچه نانو ضد لک، اسفنج ۳۵ کیلویی یورتان و اسکلت چوب چنار محکم. انتخابی بی‌نظیر برای دکوراسیون‌های شیک و امروزی.",
+          description:
+            "مبل راحتی مدل چستر با کوسن‌های تمام پر، پارچه نانو ضد لک، اسفنج ۳۵ کیلویی یورتان و اسکلت چوب چنار محکم. انتخابی بی‌نظیر برای دکوراسیون‌های شیک و امروزی.",
           basePrice: 65000000,
           images: [
             "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800&auto=format&fit=crop&q=80",
-            "https://images.unsplash.com/photo-1484101403633-562f891dc89a?w=800&auto=format&fit=crop&q=80"
+            "https://images.unsplash.com/photo-1484101403633-562f891dc89a?w=800&auto=format&fit=crop&q=80",
           ],
           colors: ["کرم", "طوسی تیره", "یشمی"],
           material: "چوب چنار و پارچه مسکو نانو",
@@ -122,11 +159,12 @@ export async function runSeed() {
         {
           name: "کاناپه چرم طبیعی آراکس",
           slug: "arax-leather-sofa",
-          description: "کاناپه چرمی با طراحی مینیمال ایتالیایی، استفاده از چرم طبیعی ایتالیایی دست‌دوز، پایه‌های فلزی آبکاری شده ضد زنگ و نشیمن بسیار راحت با فنربندی پاکتی.",
+          description:
+            "کاناپه چرمی با طراحی مینیمال ایتالیایی، استفاده از چرم طبیعی ایتالیایی دست‌دوز، پایه‌های فلزی آبکاری شده ضد زنگ و نشیمن بسیار راحت با فنربندی پاکتی.",
           basePrice: 120000000,
           images: [
             "https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?w=800&auto=format&fit=crop&q=80",
-            "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800&auto=format&fit=crop&q=80"
+            "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800&auto=format&fit=crop&q=80",
           ],
           colors: ["قهوه‌ای شکلاتی", "مشکی مات", "عسلی"],
           material: "چرم طبیعی گاو و فلز تیتانیوم",
@@ -143,10 +181,11 @@ export async function runSeed() {
         {
           name: "مبل راحتی مینیمال جولی",
           slug: "jolly-minimalist-sofa",
-          description: "طراحی کژوال اسکاندیناوی فاقد زوایای تیز، نرمی فوق‌العاده برای استراحت روزمره. انتخابی ایده‌آل برای خانه‌های آپارتمانی شیک و جوان‌پسند.",
+          description:
+            "طراحی کژوال اسکاندیناوی فاقد زوایای تیز، نرمی فوق‌العاده برای استراحت روزمره. انتخابی ایده‌آل برای خانه‌های آپارتمانی شیک و جوان‌پسند.",
           basePrice: 48000000,
           images: [
-            "https://images.unsplash.com/photo-1540518614846-7eded433c457?w=800&auto=format&fit=crop&q=80"
+            "https://images.unsplash.com/photo-1540518614846-7eded433c457?w=800&auto=format&fit=crop&q=80",
           ],
           colors: ["سفید استخوانی", "سبز زیتونی", "طوسی روشن"],
           material: "پارچه تدی درجه یک و پایه چوب راش",
@@ -163,10 +202,11 @@ export async function runSeed() {
         {
           name: "میز جلومبلی کلاسیک چوب گردو آراکس",
           slug: "arax-walnut-coffee-table",
-          description: "میز پذیرایی سلطنتی با ممرز گردوی طبیعی دست‌ساز. نقوش زیبای چوب طبیعی روی صفحه میز به کاراکتر خانه شما اصالت می‌بخشد.",
+          description:
+            "میز پذیرایی سلطنتی با ممرز گردوی طبیعی دست‌ساز. نقوش زیبای چوب طبیعی روی صفحه میز به کاراکتر خانه شما اصالت می‌بخشد.",
           basePrice: 18000000,
           images: [
-            "https://images.unsplash.com/photo-1533090161767-e6ffed986c88?w=800&auto=format&fit=crop&q=80"
+            "https://images.unsplash.com/photo-1533090161767-e6ffed986c88?w=800&auto=format&fit=crop&q=80",
           ],
           colors: ["خود رنگ گردویی", "فندقی تیره"],
           material: "چوب ۱۰۰٪ گردو جنگلی",
@@ -183,11 +223,12 @@ export async function runSeed() {
         {
           name: "سرویس خواب امپراتور پرنسس افرا",
           slug: "princess-luxury-bedroom-set",
-          description: "تخت دو نفره به همراه دو عدد میز پاتختی، آینه قدی و صندلی آرایش. لمس‌دوزی‌های چرمی روی تاج تخت با جزئیات نقره‌کوب دست‌ساز خیره‌کننده.",
+          description:
+            "تخت دو نفره به همراه دو عدد میز پاتختی، آینه قدی و صندلی آرایش. لمس‌دوزی‌های چرمی روی تاج تخت با جزئیات نقره‌کوب دست‌ساز خیره‌کننده.",
           basePrice: 95000000,
           images: [
             "https://images.unsplash.com/photo-1505691938895-1758d7feb511?w=800&auto=format&fit=crop&q=80",
-            "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=800&auto=format&fit=crop&q=80"
+            "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=800&auto=format&fit=crop&q=80",
           ],
           colors: ["صدفی طلایی", "کرم نقره‌کوب"],
           material: "ام‌دی‌اف وارداتی و امپریال پی‌وی‌سی و پارچه مخمل لوکس",
@@ -200,7 +241,7 @@ export async function runSeed() {
           isActive: true,
           categoryId: bedroomCategoryId,
           showroomId: afraShowroomId,
-        }
+        },
       ];
 
       for (const prod of sampleProducts) {
@@ -208,7 +249,9 @@ export async function runSeed() {
       }
       console.log("5 sample products seeded successfully.");
     } else {
-      console.log("Products already satisfy seed requirements or showroom relations missing.");
+      console.log(
+        "Products already satisfy seed requirements or showroom relations missing.",
+      );
     }
 
     console.log("Database seed check and setup completed successfully.");
@@ -218,7 +261,10 @@ export async function runSeed() {
 }
 
 // Automatically run seed when executed directly as a script via CLI
-if (process.argv[1] && (process.argv[1].includes("seed.ts") || process.argv[1].endsWith("seed.js"))) {
+if (
+  process.argv[1] &&
+  (process.argv[1].includes("seed.ts") || process.argv[1].endsWith("seed.js"))
+) {
   runSeed()
     .then(() => {
       console.log("Seeding process completed.");
@@ -229,4 +275,3 @@ if (process.argv[1] && (process.argv[1].includes("seed.ts") || process.argv[1].e
       process.exit(1);
     });
 }
-
