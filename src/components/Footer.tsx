@@ -1,7 +1,32 @@
 import { Sofa, Phone, Mail, MapPin, Instagram, ShieldCheck, Gem } from "lucide-react";
 import { Link } from "react-router-dom";
+import React, { useEffect, useState } from "react";
 
 export default function Footer() {
+  const [settings, setSettings] = useState<any>(null);
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.settings) {
+          setSettings(data.settings);
+        }
+      })
+      .catch((err) => console.error(err));
+  }, []);
+
+  const address = settings?.contact_address || "تهران، بازار مبل یافت‌آباد، بلوار معلم، دفتر مدیریت فضا";
+  const phone = settings?.contact_phone || "۰۲۱-۶۶۵۴۳۲۱۰";
+  const email = settings?.contact_email || "info@modern-home.ir";
+  const about_desc = settings?.about_desc || "پلتفرم تخصصی واسطه‌گری و مشاوره‌ی رایگان خرید مبلمان لوکس و ژورنالی از برترین و برجسته‌ترین نمایشگاه‌های مبل ایران. ما بهترین قیمت تولیدی و تضمین کیفیت را بدون دردسر برای شما هماهنگ می‌کنیم.";
+  const instagram = settings?.instagram || "modern_home_gallery";
+
+  const getInstagramUrl = () => {
+    if (!instagram) return "#";
+    return instagram.startsWith("http") ? instagram : `https://instagram.com/${instagram}`;
+  };
+
   return (
     <footer className="bg-stone-950 text-stone-300 pt-16 pb-8 border-t border-stone-850">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -19,11 +44,11 @@ export default function Footer() {
               </span>
             </div>
             <p className="text-sm text-stone-400 leading-relaxed max-w-sm">
-              پلتفرم تخصصی واسطه‌گری و مشاوره‌ی رایگان خرید مبلمان لوکس و ژورنالی از برترین و برجسته‌ترین نمایشگاه‌های مبل ایران. ما بهترین قیمت تولیدی و تضمین کیفیت را بدون دردسر برای شما هماهنگ می‌کنیم.
+              {about_desc}
             </p>
             <div className="flex gap-4">
               <a
-                href="https://instagram.com"
+                href={getInstagramUrl()}
                 target="_blank"
                 rel="noreferrer"
                 className="w-9 h-9 rounded-full bg-stone-900 flex items-center justify-center hover:bg-stone-800 hover:text-stone-50 transition-colors"
@@ -59,15 +84,15 @@ export default function Footer() {
             <ul className="space-y-3.5 text-sm text-stone-400">
               <li className="flex gap-2.5 items-start">
                 <MapPin className="w-4 h-4 text-stone-400 shrink-0 mt-0.5" />
-                <span>تهران، بازار مبل یافت‌آباد، بلوار معلم، دفتر مدیریت فضا</span>
+                <span>{address}</span>
               </li>
               <li className="flex gap-2.5 items-center">
                 <Phone className="w-4 h-4 text-stone-400 shrink-0" />
-                <span dir="ltr">۰۲۱-۶۶۵۴۳۲۱۰</span>
+                <span dir="ltr">{phone}</span>
               </li>
               <li className="flex gap-2.5 items-center">
                 <Mail className="w-4 h-4 text-stone-400 shrink-0" />
-                <span>info@modern-home.ir</span>
+                <span className="font-sans text-xs">{email}</span>
               </li>
             </ul>
           </div>
