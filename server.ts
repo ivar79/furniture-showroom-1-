@@ -26,7 +26,7 @@ if (!process.env.VERCEL) {
 }
 
 const app = express();
-const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+const PORT = 3000;
 
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
@@ -343,6 +343,7 @@ app.post("/api/products", async (req, res) => {
     basePrice,
     images,
     colors,
+    colorVariants,
     material,
     dimensions,
     fabricType,
@@ -384,6 +385,7 @@ app.post("/api/products", async (req, res) => {
       : colors
         ? colors.split("،").map((c: string) => c.trim())
         : [];
+    const parsedColorVariants = Array.isArray(colorVariants) ? colorVariants : [];
 
     const inserted = await db
       .insert(schema.products)
@@ -394,6 +396,7 @@ app.post("/api/products", async (req, res) => {
         basePrice: Number(basePrice),
         images: parsedImages,
         colors: parsedColors,
+        colorVariants: parsedColorVariants,
         material,
         dimensions,
         fabricType,
@@ -422,6 +425,7 @@ app.put("/api/products/:id", async (req, res) => {
     basePrice,
     images,
     colors,
+    colorVariants,
     material,
     dimensions,
     fabricType,
@@ -443,6 +447,7 @@ app.put("/api/products/:id", async (req, res) => {
       : colors
         ? colors.split("،").map((c: string) => c.trim())
         : undefined;
+    const parsedColorVariants = Array.isArray(colorVariants) ? colorVariants : undefined;
 
     const updated = await db
       .update(schema.products)
@@ -453,6 +458,7 @@ app.put("/api/products/:id", async (req, res) => {
         basePrice: basePrice ? Number(basePrice) : undefined,
         images: parsedImages,
         colors: parsedColors,
+        colorVariants: parsedColorVariants,
         material,
         dimensions,
         fabricType,
@@ -985,6 +991,123 @@ app.post("/api/admin/customers/vip-threshold", async (req, res) => {
     return res.json({ success: true, threshold });
   } catch (error: any) {
     console.error("VIP threshold update error:", error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post("/api/admin/change-password", async (req, res) => {
+  try {
+    const db = getDb();
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, error: "رمز عبور فعلی و جدید الزامی است" });
+    }
+
+    const admin = await db.select().from(schema.admins).limit(1);
+    if (admin.length === 0) {
+      return res.status(404).json({ success: false, error: "ادمین یافت نشد" });
+    }
+
+    const isMatch = await bcryptjs.compare(currentPassword, admin[0].password);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, error: "رمز عبور فعلی اشتباه است" });
+    }
+
+    const hashedPassword = await bcryptjs.hash(newPassword, 10);
+    await db.update(schema.admins).set({ password: hashedPassword }).where(eq(schema.admins.id, admin[0].id));
+
+    return res.json({ success: true, message: "رمز عبور ادمین با موفقیت تغییر کرد" });
+  } catch (error: any) {
+    console.error("Change password error:", error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post("/api/admin/vip-password", async (req, res) => {
+  try {
+    const db = getDb();
+    const { vipPassword } = req.body;
+    
+    const foundSetting = await db
+      .select()
+      .from(schema.siteSettings)
+      .where(eq(schema.siteSettings.key, "vip_global_password"))
+      .limit(1);
+
+    if (foundSetting.length > 0) {
+      await db
+        .update(schema.siteSettings)
+        .set({ value: vipPassword, updatedAt: new Date() })
+        .where(eq(schema.siteSettings.key, "vip_global_password"));
+    } else {
+      await db.insert(schema.siteSettings).values({
+        key: "vip_global_password",
+        value: vipPassword,
+        updatedAt: new Date(),
+      });
+    }
+
+    return res.json({ success: true });
+  } catch (error: any) {
+    console.error("VIP password update error:", error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get("/api/admin/vip-password", async (req, res) => {
+  try {
+    const db = getDb();
+    const foundSetting = await db
+      .select()
+      .from(schema.siteSettings)
+      .where(eq(schema.siteSettings.key, "vip_global_password"))
+      .limit(1);
+
+    return res.json({ success: true, vipPassword: foundSetting.length > 0 ? foundSetting[0].value : "" });
+  } catch (error: any) {
+    console.error("VIP password get error:", error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post("/api/customer/vip-login", async (req, res) => {
+  try {
+    const db = getDb();
+    const { password } = req.body;
+    if (!password) {
+      return res.status(400).json({ success: false, error: "کلمه عبور وارد نشده است" });
+    }
+
+    const foundSetting = await db
+      .select()
+      .from(schema.siteSettings)
+      .where(eq(schema.siteSettings.key, "vip_global_password"))
+      .limit(1);
+
+    if (foundSetting.length === 0 || foundSetting[0].value !== password) {
+      return res.status(401).json({ success: false, error: "کلمه عبور یکپارچه VIP اشتباه است" });
+    }
+
+    return res.json({
+      success: true,
+      message: "ورود با کلمه عبور VIP موفقیت‌آمیز بود",
+      customer: {
+        id: "vip-global-user",
+        name: "کاربر ویژه (VIP)",
+        phone: "VIP-ACCESS",
+        email: null,
+      },
+      stats: {
+        totalOrders: 0,
+        totalSpent: 0,
+        commissionSaved: 0,
+        isVip: true,
+        nextRankRemaining: 0,
+        vipThreshold: 0,
+      }
+    });
+  } catch (error: any) {
+    console.error("VIP Login Error:", error);
     return res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -1767,11 +1890,11 @@ app.get("/api/admin/commissions-report", async (req, res) => {
 // DYNAMIC SITE SETTINGS API
 // -----------------------------------------------------------------------------
 const DEFAULT_SETTINGS: Record<string, string> = {
-  about_title: "درباره گالری مبلمان مدرن هوم",
+  about_title: "درباره گالری مبلمان Modern Home",
   about_desc:
     "ما محصول عینی نمی‌فروشیم — ما حلقه ارتباطی امن و وکیل شما با نمایشگا‌ه‌های ممتاز مبلمان کشور هستیم.",
   about_content:
-    "در مدل سنتی خرید مبل، مشتریان معمولاً با چالش‌های بزرگی نظیر قیمت‌های نامتعادل دلالان، تنوع پایین، تحویل دیرهنگام و عدم همخوانی متریال اسفنج کلاف و چوب با ادعای فروشنده مواجه می‌شوند.\n\nپلتفرم مدرن هوم به عنوان مرجع تخصصی دکوراسیون، این خلأ را به شیوه‌ای مدرن پوشش می‌دهد. ما با بیش از ۲۵ کارگاه مبل‌سازی و نمایشگاه‌های برند مبل در بازارهای تخصصی ایران از جمله یافت‌آباد، دلاوران و جاجرود هماهنگ هستیم.",
+    "در مدل سنتی خرید مبل، مشتریان معمولاً با چالش‌های بزرگی نظیر قیمت‌های نامتعادل دلالان، تنوع پایین، تحویل دیرهنگام و عدم همخوانی متریال اسفنج کلاف و چوب با ادعای فروشنده مواجه می‌شوند.\n\nپلتفرم Modern Home به عنوان مرجع تخصصی دکوراسیون، این خلأ را به شیوه‌ای مدرن پوشش می‌دهد. ما با بیش از ۲۵ کارگاه مبل‌سازی و نمایشگاه‌های برند مبل در بازارهای تخصصی ایران از جمله یافت‌آباد، دلاوران و جاجرود هماهنگ هستیم.",
   contact_address:
     "تهران، بازار مبل یافت‌آباد غربی، بلوار معلم، ساختمان دیزاین فضا، پلاک ۱۸۰، طبقه ۳",
   contact_phone: "۰۲۱-۶۶۵۴۳۲۱۰ / ۰۹۱۲۳۴۵۶۷۸۹",
@@ -1779,6 +1902,8 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   instagram: "modern_home_gallery",
   telegram: "modern_home_admin",
   bale: "@modern_home",
+  hero_images: "",
+  site_logo: "",
 };
 
 app.get("/api/settings", async (req, res) => {
@@ -1850,8 +1975,7 @@ app.post("/api/admin/settings", async (req, res) => {
 // -----------------------------------------------------------------------------
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
-    const viteModule = "vite";
-    const { createServer: createViteServer } = await import(viteModule);
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",

@@ -3,6 +3,26 @@ import { useParams, Link } from "react-router-dom";
 import { Product, Showroom, Category } from "../types";
 import { ArrowRight, CheckCircle2, Store, Calendar, HelpCircle, PhoneCall, Heart, Star, Sparkles, MapPin, ShieldAlert, BadgeInfo, ShieldCheck, Scale, Percent, Layers } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { useWishlist } from "../hooks/useWishlist";
+
+function WishlistToggle({ productId }: { productId: string }) {
+  const { toggleWishlist, isInWishlist } = useWishlist();
+  const isWishlisted = isInWishlist(productId);
+
+  return (
+    <button
+      onClick={() => toggleWishlist(productId)}
+      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
+        isWishlisted 
+          ? "bg-rose-50 text-rose-500 border-rose-200 hover:bg-rose-100" 
+          : "bg-white text-stone-500 border-stone-200 hover:bg-stone-50 hover:text-stone-900"
+      }`}
+    >
+      <Heart className={`w-4 h-4 ${isWishlisted ? "fill-current" : ""}`} />
+      <span>{isWishlisted ? "حذف از علاقه‌مندی‌ها" : "افزودن به علاقه‌مندی‌ها"}</span>
+    </button>
+  );
+}
 
 export default function ProductDetail() {
   const { slug } = useParams();
@@ -136,11 +156,15 @@ export default function ProductDetail() {
     <div className="bg-stone-50 min-h-screen text-stone-900 pt-28 pb-20 leading-relaxed">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* Back Link */}
-        <Link to="/products" className="inline-flex items-center gap-1 text-xs text-stone-500 hover:text-stone-900 mb-6 transition-colors">
-          <ArrowRight className="w-4 h-4" />
-          <span>برگشت به گالری و کاتالوگ</span>
-        </Link>
+        {/* Top Bar: Back Link & Wishlist */}
+        <div className="flex items-center justify-between mb-6">
+          <Link to="/products" className="inline-flex items-center gap-1 text-xs text-stone-500 hover:text-stone-900 transition-colors">
+            <ArrowRight className="w-4 h-4" />
+            <span>برگشت به گالری و کاتالوگ</span>
+          </Link>
+          
+          <WishlistToggle productId={product.id} />
+        </div>
 
         {/* Double Column layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
@@ -150,11 +174,11 @@ export default function ProductDetail() {
             
             {/* Image display stage */}
             <div className="bg-white border border-stone-200/50 p-4 rounded-3xl space-y-4">
-              <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-stone-100">
+              <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-stone-100 group">
                 <img
                   src={currentImage}
                   alt={product.name}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   referrerPolicy="no-referrer"
                 />
               </div>
@@ -218,85 +242,89 @@ export default function ProductDetail() {
 
               </div>
 
-              {/* Colors show */}
-              {product.colors && product.colors.length > 0 && (
-                <div className="pt-2">
-                  <span className="text-xs text-stone-400 block mb-2 font-bold">کالیته‌های رنگ پرفروش</span>
-                  <div className="flex gap-2">
-                    {product.colors.map((c, idx) => (
-                      <span key={idx} className="bg-stone-100 text-stone-700 px-3 py-1.5 rounded-xl text-xs font-semibold">
-                        {c}
-                      </span>
-                    ))}
+              {/* Interactive Colors/Fabric Selector */}
+              {((product.colorVariants && product.colorVariants.length > 0) || (product.colors && product.colors.length > 0)) && (
+                <div className="pt-4 border-t border-stone-100">
+                  <div className="flex justify-between items-end mb-4">
+                    <div>
+                      <h4 className="text-sm font-extrabold text-stone-900 mb-1">کالیته پارچه و چرم</h4>
+                      <p className="text-xs text-stone-500 font-light">رنگ مورد نظر خود را برای مشاهده انتخاب کنید</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-3">
+                    {/* Render color variants if they exist, else fallback to simple string colors */}
+                    {(product.colorVariants && product.colorVariants.length > 0 
+                      ? product.colorVariants 
+                      : (product.colors || []).map(c => ({ name: c }))
+                    ).map((variant: any, idx) => {
+                      const c = variant.name;
+                      
+                      // Generate a pseudo-color based on string for preview purposes
+                      const pseudoColors: Record<string, string> = {
+                        "سفید": "bg-stone-100 border-stone-200",
+                        "کرم": "bg-[#F5F5DC] border-[#E8E8C8]",
+                        "طوسی": "bg-stone-400 border-stone-500",
+                        "زغالی": "bg-stone-700 border-stone-800",
+                        "سبز": "bg-[#4A5D23] border-[#3A4D13]",
+                        "آبی": "bg-[#2C3E50] border-[#1C2E40]",
+                        "مشکی": "bg-stone-900 border-black",
+                        "نسکافه ای": "bg-[#D4B895] border-[#C4A885]",
+                        "قهوه ای": "bg-[#5C4033] border-[#4C3023]",
+                        "زرشکی": "bg-[#800000] border-[#700000]",
+                      };
+                      
+                      // Find best match or default to a neutral
+                      const matchedKey = Object.keys(pseudoColors).find(key => c.includes(key));
+                      const colorClass = matchedKey ? pseudoColors[matchedKey] : "bg-stone-300 border-stone-400";
+                      
+                      return (
+                        <button 
+                          key={idx} 
+                          onClick={() => {
+                             // Just a small interaction to show it's clickable
+                             const el = document.getElementById(`fabric-preview-${idx}`);
+                             if (el) {
+                               el.classList.add("scale-95");
+                               setTimeout(() => el.classList.remove("scale-95"), 150);
+                             }
+                             
+                             // Update main image if variant has one
+                             if (variant.productImage) {
+                               setActiveImage(variant.productImage);
+                             }
+                          }}
+                          className="group flex flex-col items-center gap-2 cursor-pointer"
+                        >
+                          {variant.image ? (
+                            <img 
+                              id={`fabric-preview-${idx}`}
+                              src={variant.image}
+                              alt={c}
+                              className="w-10 h-10 rounded-full border-2 border-stone-200 object-cover transition-all duration-200 shadow-sm group-hover:shadow-md group-hover:scale-105 group-hover:border-stone-900"
+                            />
+                          ) : (
+                            <div 
+                              id={`fabric-preview-${idx}`}
+                              className={`w-10 h-10 rounded-full border-2 transition-all duration-200 shadow-sm ${colorClass} group-hover:shadow-md group-hover:scale-105 group-hover:border-stone-900`}
+                              title={c}
+                            />
+                          )}
+                          <span className="text-[10px] text-stone-600 font-medium">{c}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  
+                  <div className="mt-4 p-3 bg-stone-50 rounded-xl border border-stone-100 flex gap-2 items-start">
+                    <BadgeInfo className="w-4 h-4 text-stone-500 shrink-0 mt-0.5" />
+                    <p className="text-[10px] text-stone-500 leading-relaxed text-right">
+                      رنگ‌های نمایش داده شده صرفاً جهت تقریب ذهنی است. برای مشاهده دقیق بافت و رنگ در نور طبیعی، از گزینه <strong>«درخواست ارسال کالیته پارچه»</strong> استفاده کنید.
+                    </p>
                   </div>
                 </div>
               )}
             </div>
-
-            {/* Platform Exclusive Protections & Anti-bypass Info */}
-            <div className="bg-stone-900 text-stone-100 p-6 sm:p-8 rounded-3xl space-y-6 border border-stone-800">
-              <div className="space-y-1.5 text-right">
-                <span className="text-[10px] bg-amber-400 text-stone-950 font-extrabold px-2.5 py-1 rounded-md inline-block uppercase tracking-wider">
-                  بسته طلایی خرید مشتری
-                </span>
-                <h3 className="text-base sm:text-lg font-extrabold text-stone-100 flex items-center gap-2">
-                  <ShieldCheck className="w-5 h-5 text-amber-400 shrink-0" />
-                  چرا ثبت از سایت؟ چرا مستقیم خرید نکنیم؟
-                </h3>
-                <p className="text-stone-400 text-xs font-light leading-relaxed">
-                  مراجعه مستقیم بدلیل عدم نظارت پلتفرم مدرن هوم معمولاً منجر به از دست رفتن تخفیف‌ها، تحویل دیرهنگام بدون امکان پیگیری قانونی و یا استفاده ناخواسته از متریال با کیفیت پایین‌تر (اسفنج متفرقه بجای یورتان ۳۵ کیلویی) می‌شود.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                
-                {/* Perk 1: Discount */}
-                <div className="bg-stone-800/40 border border-stone-800/60 p-4 rounded-2xl space-y-2 text-right">
-                  <div className="w-8 h-8 rounded-xl bg-amber-400/10 flex items-center justify-center text-amber-400">
-                    <Percent className="w-4 h-4" />
-                  </div>
-                  <h4 className="text-xs font-extrabold text-stone-100">۵٪ تخفیف انحصاری پلتفرم</h4>
-                  <p className="text-[11px] text-stone-400 leading-relaxed font-light">
-                    فاکتور نهایی شما در سراسر کشور ۵٪ ارزان‌تر از قیمت مراجعه حضوری و مستقیم به فیزیک نمایشگاه صادر خواهد شد.
-                  </p>
-                </div>
-
-                {/* Perk 2: Workshop QC Inspection */}
-                <div className="bg-stone-800/40 border border-stone-800/60 p-4 rounded-2xl space-y-2 text-right">
-                  <div className="w-8 h-8 rounded-xl bg-amber-400/10 flex items-center justify-center text-amber-400">
-                    <Layers className="w-4 h-4" />
-                  </div>
-                  <h4 className="text-xs font-extrabold text-stone-100">کارشناسی مهندسی متریال مبل</h4>
-                  <p className="text-[11px] text-stone-400 leading-relaxed font-light">
-                    ناظران فنی ما دانسیته واقعی اسفنج ۳۵ کیلویی و کیفیت الوار چوبی کارگاه را پیش از بارگیری فیزیکی تایید می‌کنند.
-                  </p>
-                </div>
-
-                {/* Perk 3: 3D Consultation */}
-                <div className="bg-stone-800/40 border border-stone-800/60 p-4 rounded-2xl space-y-2 text-right">
-                  <div className="w-8 h-8 rounded-xl bg-amber-400/10 flex items-center justify-center text-amber-400">
-                    <Sparkles className="w-4 h-4" />
-                  </div>
-                  <h4 className="text-xs font-extrabold text-stone-100">مشاوره ۳بعدی چیدمان و پارچه</h4>
-                  <p className="text-[11px] text-stone-400 leading-relaxed font-light">
-                    انطباق علمی طیف رنگی کالیته با والپیپر و مبلمان قبلی شما با رندر ۳بعدی دکوراسیون پلتفرم ما به صورت ۱۰۰٪ رایگان.
-                  </p>
-                </div>
-
-                {/* Perk 4: Legal & Penalty Protection */}
-                <div className="bg-stone-800/40 border border-stone-800/60 p-4 rounded-2xl space-y-2 text-right">
-                  <div className="w-8 h-8 rounded-xl bg-amber-400/10 flex items-center justify-center text-amber-400">
-                    <Scale className="w-4 h-4" />
-                  </div>
-                  <h4 className="text-xs font-extrabold text-stone-100">حمایت حقوقی و جریمه دیرکرد</h4>
-                  <p className="text-[11px] text-stone-400 leading-relaxed font-light">
-                    پلتفرم، زمان تحویل نمایشگاه را گارانتی می‌کند؛ به ازای هر روز تاخیر، جریمه روزشمار کسر و به خریدار بازپرداخت می‌شود.
-                  </p>
-                </div>
-
-              </div>
-            </div>
-
           </div>
 
           {/* Column 2: Order Lead Form & Showroom Details */}
@@ -360,7 +388,7 @@ export default function ProductDetail() {
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-l from-amber-400 via-stone-500 to-stone-400" />
               
               <div className="space-y-1.5 text-right">
-                <h3 className="text-lg font-extrabold text-stone-50">درخواست هماهنگی و مشاوره رایگان</h3>
+                <h3 className="text-lg font-extrabold text-stone-50">رزرو وقت بازدید و مشاوره اختصاصی</h3>
                 <p className="text-stone-400 text-xs font-light">مبلمان واسطه‌گری ما را با بهترین شرایط قیمتی کاندید کنید. کارشناسان ما جهت هماهنگی با شما تماس خواهند گرفت.</p>
               </div>
 
@@ -438,20 +466,31 @@ export default function ProductDetail() {
                   )}
 
                   {/* Submit button */}
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full bg-stone-50 hover:bg-stone-200 text-stone-900 py-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 mt-2"
-                  >
-                    {isSubmitting ? (
-                      <span className="animate-pulse">در حال بررسی اطلاعات...</span>
-                    ) : (
-                      <>
-                        <PhoneCall className="w-4 h-4" />
-                        <span>ثبت رایگان درخواست مشاوره</span>
-                      </>
-                    )}
-                  </button>
+                  <div className="pt-2 space-y-3">
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-full bg-stone-50 hover:bg-stone-200 text-stone-900 py-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2"
+                    >
+                      {isSubmitting ? (
+                        <span className="animate-pulse">در حال پردازش...</span>
+                      ) : (
+                        <>
+                          <PhoneCall className="w-4 h-4" />
+                          <span>رزرو وقت بازدید و مشاوره اختصاصی</span>
+                        </>
+                      )}
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => alert("درخواست شما برای ارسال کالیته ثبت شد. همکاران ما برای هماهنگی آدرس با شما تماس می‌گیرند.")}
+                      className="w-full bg-stone-800 hover:bg-stone-700 text-stone-300 border border-stone-700 hover:text-white py-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                      <span>درخواست ارسال کالیته پارچه (VIP)</span>
+                    </button>
+                  </div>
                 </form>
               ) : (
                 <motion.div
@@ -462,7 +501,7 @@ export default function ProductDetail() {
                   <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto" />
                   <h4 className="text-sm font-extrabold text-stone-50">بسته طلایی و تخفیف ۵٪ شما رزرو شد!</h4>
                   <p className="text-stone-300 text-xs font-light leading-relaxed">
-                    با تشکر از ثبت هوشمندانه درخواست در پلتفرم واسطه‌گری <span className="font-semibold text-stone-50">مدرن هوم</span>.<br />
+                    با تشکر از ثبت هوشمندانه درخواست در پلتفرم واسطه‌گری <span className="font-semibold text-stone-50">Modern Home</span>.<br />
                     تخفیف انحصاری ۵٪، بن مشاوره دکوراسیون و گارانتی کاربری مهندسی متریال مبل برای شماره‌ی <span className="font-bold underline text-stone-100">{customerPhone}</span> قفل شد. کارشناسان ما ظرف ۲۴ ساعت آینده با شما تماس خواهند گرفت.
                   </p>
                   <button

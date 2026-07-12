@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ShieldCheck, Search, Flame, Sofa, Store, Percent, Layers, Sparkles, Scale, RefreshCw, Trophy, Crown, ArrowLeft, BarChart2, CheckCircle2, AlertTriangle, LogOut, Copy, Check, Share2, Users, Github, KeyRound, Mail, UserCheck } from "lucide-react";
+import { ShieldCheck, Search, Flame, Sofa, Store, Percent, Layers, Sparkles, Scale, RefreshCw, Trophy, Crown, ArrowLeft, BarChart2, CheckCircle2, AlertTriangle, LogOut, Copy, Check, Share2, Users, Github, KeyRound, Mail, UserCheck, Key } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 interface CustomerPortalData {
@@ -30,6 +30,10 @@ export default function CustomerClub() {
   const [otpSent, setOtpSent] = useState(false);
   const [otpCodeInput, setOtpCodeInput] = useState("");
   const [otpTimer, setOtpTimer] = useState(0);
+
+  // VIP Password login mode
+  const [isVipLoginMode, setIsVipLoginMode] = useState(false);
+  const [vipPasswordInput, setVipPasswordInput] = useState("");
 
   // Social linking OTP variables
   const [socialOtpSent, setSocialOtpSent] = useState(false);
@@ -138,6 +142,39 @@ export default function CustomerClub() {
       }
     } catch (err) {
       setError("خطا در تایید کد پیامکی");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVipLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!vipPasswordInput.trim()) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await fetch("/api/customer/vip-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: vipPasswordInput.trim() })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCustomerData({
+          ...data.customer,
+          stats: data.stats
+        });
+        setOrders([]);
+        localStorage.setItem("customerClubPhone", "VIP-ACCESS");
+        setNotification(null);
+        setIsVipLoginMode(false);
+        setVipPasswordInput("");
+      } else {
+        setError(data.error || "کلمه عبور VIP نادرست است");
+      }
+    } catch (err) {
+      setError("خطا در تایید کلمه عبور VIP");
     } finally {
       setLoading(false);
     }
@@ -395,13 +432,60 @@ export default function CustomerClub() {
               </div>
               
               <div className="space-y-2">
-                <h2 className="text-xl font-extrabold text-stone-900 dark:text-stone-50">باشگاه و پیگیری سفارشات ویژه مدرن هوم</h2>
+                <h2 className="text-xl font-extrabold text-stone-900 dark:text-stone-50">باشگاه و پیگیری سفارشات ویژه Modern Home</h2>
                 <p className="text-xs text-stone-400 dark:text-stone-400 font-light leading-relaxed">
                   سریع‌ترین سیستم رهگیری فرآیند ساخت مبل در کارگاه، مشاهده امتیازات دکوراسیون و دسترسی به باشگاه تخفیف انحصاری ۵٪
                 </p>
               </div>
 
-              {!otpSent ? (
+              {isVipLoginMode ? (
+                <form onSubmit={handleVipLoginSubmit} className="space-y-4">
+                  <div className="space-y-1.5 text-right">
+                    <label className="text-xs font-bold text-stone-600 dark:text-stone-300">رمز عبور ویژه یکپارچه (VIP)</label>
+                    <input
+                      type="password"
+                      placeholder="کلمه عبور خود را وارد کنید"
+                      value={vipPasswordInput}
+                      onChange={(e) => setVipPasswordInput(e.target.value)}
+                      className="w-full text-center bg-stone-50 dark:bg-stone-850 border border-stone-200 dark:border-stone-800 rounded-xl py-3 px-4 text-sm focus:outline-none focus:ring-1 focus:ring-amber-500 text-stone-900 dark:text-stone-100 font-bold font-mono"
+                      required
+                      dir="ltr"
+                    />
+                  </div>
+
+                  {error && (
+                    <div className="flex gap-2 items-start text-xs bg-red-100 dark:bg-red-950/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900/40 p-3 rounded-xl text-right">
+                      <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                      <span>{error}</span>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-stone-900 hover:bg-stone-800 text-white py-3 rounded-xl text-xs font-extrabold transition-all duration-300 shadow-lg flex items-center justify-center gap-2"
+                  >
+                    {loading ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <ShieldCheck className="w-4 h-4" />
+                        <span>تایید رمز و ورود به پنل ویژه</span>
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsVipLoginMode(false);
+                      setError(null);
+                    }}
+                    className="w-full text-[10px] text-stone-500 hover:text-stone-800 font-bold hover:underline"
+                  >
+                    بازگشت به ورود با شماره همراه
+                  </button>
+                </form>
+              ) : !otpSent ? (
                 <form onSubmit={handleRequestOtp} className="space-y-4">
                   <div className="space-y-1.5 text-right">
                     <label className="text-xs font-bold text-stone-600 dark:text-stone-300">شماره همراهِ ثبت فاکتور</label>
@@ -507,9 +591,19 @@ export default function CustomerClub() {
                 </form>
               )}
               
-              <div className="pt-4 border-t border-stone-100 dark:border-stone-850 flex items-center justify-center gap-2 text-[10px] text-stone-400 font-light">
-                <ShieldCheck className="w-3.5 h-3.5 text-amber-500" />
-                <span>دسترسی موقت بدون نیاز به کلمه عبور پیچیده</span>
+              <div className="pt-4 border-t border-stone-100 dark:border-stone-850 flex flex-col gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsVipLoginMode(true)}
+                  className="flex items-center justify-center gap-2 text-[11px] font-bold text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 py-2.5 rounded-xl transition-all"
+                >
+                  <Key className="w-3.5 h-3.5" />
+                  <span>ورود با کلمه عبور ویژه (VIP)</span>
+                </button>
+                <div className="flex items-center justify-center gap-2 text-[10px] text-stone-400 font-light">
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-500" />
+                  <span>دسترسی موقت بدون نیاز به کلمه عبور پیچیده</span>
+                </div>
               </div>
 
               {/* Secure Unified Login Option */}
@@ -587,7 +681,7 @@ export default function CustomerClub() {
                       <h2 className="text-lg font-extrabold">{customerData.name}</h2>
                       {customerData.isVip && (
                         <span className="text-[9px] bg-amber-400 text-stone-950 font-extrabold px-2 py-0.5 rounded-md uppercase">
-                          VIP الیت مدرن هوم
+                          VIP الیت Modern Home
                         </span>
                       )}
                     </div>
@@ -768,7 +862,7 @@ export default function CustomerClub() {
                       </div>
                       <h4 className="text-xs font-extrabold">تخفیف انحصاری ۵٪ دکور</h4>
                       <p className="text-[11px] text-stone-400 font-light leading-relaxed">
-                        عضویت شما در کلوپ مدرن هوم به صورت مادام‌العمر باعث محاسبه ۵٪ ارزان‌تر فاکتور روی هر نوع مبلمانی از فیزیک تمام گالری‌ها می‌شود.
+                        عضویت شما در کلوپ Modern Home به صورت مادام‌العمر باعث محاسبه ۵٪ ارزان‌تر فاکتور روی هر نوع مبلمانی از فیزیک تمام گالری‌ها می‌شود.
                       </p>
                     </div>
 
@@ -798,7 +892,7 @@ export default function CustomerClub() {
                       </div>
                       <h4 className="text-xs font-extrabold">مشاوره دکوراسیون ۳بعدی رایگان</h4>
                       <p className="text-[11px] text-stone-400 font-light leading-relaxed">
-                        دیزاینرهای الیت مدرن هوم چیدمان شما را با کالیته کاندید شده به صورت رندرهای دیجیتالی منطبق با ابعاد منزل شما بازطراحی می‌کنند.
+                        دیزاینرهای الیت Modern Home چیدمان شما را با کالیته کاندید شده به صورت رندرهای دیجیتالی منطبق با ابعاد منزل شما بازطراحی می‌کنند.
                       </p>
                     </div>
 
@@ -836,7 +930,7 @@ export default function CustomerClub() {
                           لینک اختصاصی به اشتراک‌گذاری و معرفی کلوپ الیت مبل
                         </h3>
                         <p className="text-xs text-stone-400 font-light leading-relaxed">
-                          دوستان و همکاران خود را به مدرن هوم معرفی کنید. هم دوست معرفی شده شما از <strong className="text-emerald-500">تخفیف نقدی ارجاعی دکوراسیون</strong> بهره‌مند می‌شود و هم به پاس اعتماد شما، <strong className="text-emerald-500">مبلغ ۲۵۰,۰۰۰ تومان اعتبار کسر از فاکتور</strong> برای خریدهای بعدی یا تسویه‌های دکور به حساب شما واریز خواهد شد!
+                          دوستان و همکاران خود را به Modern Home معرفی کنید. هم دوست معرفی شده شما از <strong className="text-emerald-500">تخفیف نقدی ارجاعی دکوراسیون</strong> بهره‌مند می‌شود و هم به پاس اعتماد شما، <strong className="text-emerald-500">مبلغ ۲۵۰,۰۰۰ تومان اعتبار کسر از فاکتور</strong> برای خریدهای بعدی یا تسویه‌های دکور به حساب شما واریز خواهد شد!
                         </p>
                       </div>
 

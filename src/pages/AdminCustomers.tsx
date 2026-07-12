@@ -170,7 +170,7 @@ export default function AdminCustomers() {
             سیستم مدیریت کلوپ مشتریان و VIP
           </h1>
           <p className="text-xs text-stone-400 font-light">
-            لیست خریداران، امتیازات کسب شده دکوراسیون و اعتبارسنجی باشگاه الیت مدرن هوم
+            لیست خریداران، امتیازات کسب شده دکوراسیون و اعتبارسنجی باشگاه الیت Modern Home
           </p>
         </div>
         <button

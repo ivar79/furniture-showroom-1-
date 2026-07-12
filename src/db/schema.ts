@@ -1,4 +1,4 @@
-import { pgTable, text, boolean, timestamp, decimal, integer, bigint, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, text, boolean, timestamp, decimal, integer, bigint, pgEnum, jsonb } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
 
 export const orderStatusEnum = pgEnum('order_status', [
@@ -42,6 +42,7 @@ export const products = pgTable('products', {
   basePrice: bigint('base_price', { mode: 'number' }).notNull(),
   images: text('images').array().notNull().default(sql`'{}'::text[]`),
   colors: text('colors').array().notNull().default(sql`'{}'::text[]`),
+  colorVariants: jsonb('color_variants').default(sql`'[]'::jsonb`),
   material: text('material'),
   dimensions: text('dimensions'),
   fabricType: text('fabric_type'),

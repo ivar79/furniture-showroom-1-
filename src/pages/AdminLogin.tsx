@@ -63,12 +63,19 @@ export default function AdminLogin() {
         className="max-w-md w-full bg-white border border-stone-200 shadow-xl rounded-3xl p-8 space-y-6 text-right"
       >
         {/* Header decoration */}
-        <div className="text-center space-y-2">
+        <div className="flex justify-between items-start mb-2">
+          <Link to="/" className="text-stone-400 hover:text-stone-700 bg-stone-50 hover:bg-stone-100 p-2 rounded-xl border border-stone-100 transition-colors flex items-center gap-1.5 text-[10px] font-bold">
+            <ArrowRight className="w-3.5 h-3.5" />
+            <span>بازگشت به سایت</span>
+          </Link>
+        </div>
+        
+        <div className="text-center space-y-2 mt-2">
           <div className="w-12 h-12 bg-stone-900 text-stone-50 rounded-2xl flex items-center justify-center mx-auto shadow-md">
             <Sofa className="w-6 h-6" />
           </div>
           <h1 className="text-xl font-extrabold text-stone-950 font-sans tracking-tight">
-            ورود به سیستم مدیریت شووروم
+            ورود به سیستم مدیریت Modern Home
           </h1>
           <p className="text-xs text-stone-400 font-light select-none">
             پنل کنترل واسطه‌گری و ثبت گزارشات حسابداری پورسانت
@@ -125,12 +132,8 @@ export default function AdminLogin() {
           </button>
         </form>
 
-        <div className="pt-2 border-t border-stone-100 flex justify-between items-center text-[10px] text-stone-400">
+        <div className="pt-2 border-t border-stone-100 flex justify-center items-center text-[10px] text-stone-400">
           <span>داده سِشن: محلی (LocalStorage)</span>
-          <Link to="/" className="hover:text-stone-700 transition-colors flex items-center gap-1 font-semibold leading-none">
-            <span>برگشت به سایت</span>
-            <ArrowRight className="w-3 h-3" />
-          </Link>
         </div>
       </motion.div>
     </div>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Sofa, Phone, Mail, MapPin, Instagram, Send, MessageCircle, Save, CheckCircle, RefreshCw } from "lucide-react";
+import { Sofa, Phone, Mail, MapPin, Instagram, Send, MessageCircle, Save, CheckCircle, RefreshCw, Key, ShieldAlert, Image, LayoutTemplate } from "lucide-react";
 
 export default function AdminSettings() {
   const [settings, setSettings] = useState({
@@ -11,8 +11,16 @@ export default function AdminSettings() {
     contact_email: "",
     instagram: "",
     telegram: "",
-    bale: ""
+    bale: "",
+    hero_images: "",
+    site_logo: ""
   });
+  const [vipPassword, setVipPassword] = useState("");
+  const [passwords, setPasswords] = useState({
+    current: "",
+    new: "",
+  });
+  
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
@@ -29,6 +37,16 @@ export default function AdminSettings() {
       if (data.success && data.settings) {
         setSettings(data.settings);
       }
+
+      // Fetch VIP Password
+      const token = localStorage.getItem("adminToken");
+      const vipRes = await fetch("/api/admin/vip-password", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      const vipData = await vipRes.json();
+      if (vipData.success) {
+        setVipPassword(vipData.vipPassword || "");
+      }
     } catch (err) {
       console.error(err);
       setStatus({ type: "error", message: "خطا در بارگذاری تنظیمات سایت" });
@@ -40,6 +58,128 @@ export default function AdminSettings() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setSettings((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const uploadImage = async (file: File): Promise<string | null> => {
+    try {
+      const base64Data = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = (err) => reject(err);
+        reader.readAsDataURL(file);
+      });
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: base64Data, name: file.name }),
+      });
+      const data = await res.json();
+      if (data.success && data.url) {
+        return data.url;
+      }
+    } catch (err) {
+      console.error("Upload error", err);
+    }
+    return null;
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setStatus({ type: "success", message: "در حال آپلود لوگو..." });
+    const url = await uploadImage(file);
+    if (url) {
+      setSettings(prev => ({ ...prev, site_logo: url }));
+      setStatus({ type: "success", message: "لوگو با موفقیت آپلود شد." });
+    } else {
+      setStatus({ type: "error", message: "خطا در آپلود لوگو" });
+    }
+  };
+
+  const handleHeroUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setStatus({ type: "success", message: `در حال آپلود ${files.length} تصویر...` });
+    
+    const uploadedUrls: string[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const url = await uploadImage(files[i]);
+      if (url) uploadedUrls.push(url);
+    }
+    
+    if (uploadedUrls.length > 0) {
+      const currentList = settings.hero_images ? settings.hero_images.split(",").map((s:string) => s.trim()).filter(Boolean) : [];
+      const newList = [...currentList, ...uploadedUrls].join(", ");
+      setSettings(prev => ({ ...prev, hero_images: newList }));
+      setStatus({ type: "success", message: "تصاویر با موفقیت آپلود شدند." });
+    } else {
+      setStatus({ type: "error", message: "خطا در آپلود تصاویر" });
+    }
+  };
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setStatus(null);
+
+    if (!passwords.current || !passwords.new) {
+      setStatus({ type: "error", message: "تمامی فیلدهای رمز عبور الزامی است." });
+      setSaving(false);
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("adminToken");
+      const res = await fetch("/api/admin/change-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ currentPassword: passwords.current, newPassword: passwords.new })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setStatus({ type: "success", message: "رمز عبور مدیر با موفقیت تغییر کرد." });
+        setPasswords({ current: "", new: "" });
+        setTimeout(() => setStatus(null), 4000);
+      } else {
+        setStatus({ type: "error", message: data.error || "خطا در تغییر رمز عبور" });
+      }
+    } catch (err) {
+      setStatus({ type: "error", message: "خطا در ارتباط با سرور" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleVipPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setStatus(null);
+
+    try {
+      const token = localStorage.getItem("adminToken");
+      const res = await fetch("/api/admin/vip-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ vipPassword })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setStatus({ type: "success", message: "رمز عبور یکپارچه VIP با موفقیت ذخیره شد." });
+        setTimeout(() => setStatus(null), 4000);
+      } else {
+        setStatus({ type: "error", message: data.error || "خطا در ثبت رمز VIP" });
+      }
+    } catch (err) {
+      setStatus({ type: "error", message: "خطا در ارتباط با سرور" });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -100,7 +240,7 @@ export default function AdminSettings() {
       <div className="flex justify-between items-center bg-white p-6 rounded-2xl border border-stone-200/60 shadow-sm">
         <div className="text-right space-y-1">
           <h1 className="text-xl font-extrabold text-stone-900">تنظیمات اصلی سایت</h1>
-          <p className="text-xs text-stone-400">اطلاعات برگه درباره ما، جزییات فیزیکی و لینک مستقیم به شبکه‌های اجتماعی مدرن هوم را مدیریت کنید.</p>
+          <p className="text-xs text-stone-400">اطلاعات برگه درباره ما، جزییات فیزیکی و لینک مستقیم به شبکه‌های اجتماعی Modern Home را مدیریت کنید.</p>
         </div>
         <div className="p-3 bg-stone-100 rounded-xl text-stone-900">
           <Sofa className="w-6 h-6" />
@@ -117,8 +257,138 @@ export default function AdminSettings() {
         </div>
       )}
 
+      {/* Admin Security */}
+      <div className="bg-white p-6 rounded-2xl border border-stone-200/60 shadow-sm space-y-5">
+        <h3 className="text-sm font-bold text-stone-900 border-b border-stone-100 pb-3 flex items-center gap-2">
+          <ShieldAlert className="w-4 h-4 text-rose-500" />
+          <span>تغییر کلمه عبور مدیر سیستم</span>
+        </h3>
+        <form onSubmit={handlePasswordChange} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-stone-500 block">رمز عبور فعلی</label>
+            <input
+              type="password"
+              value={passwords.current}
+              onChange={(e) => setPasswords(p => ({ ...p, current: e.target.value }))}
+              className="w-full text-xs font-medium border border-stone-200 p-3 rounded-xl bg-stone-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-stone-950/25 transition-all text-left"
+              dir="ltr"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-stone-500 block">رمز عبور جدید</label>
+            <input
+              type="password"
+              value={passwords.new}
+              onChange={(e) => setPasswords(p => ({ ...p, new: e.target.value }))}
+              className="w-full text-xs font-medium border border-stone-200 p-3 rounded-xl bg-stone-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-stone-950/25 transition-all text-left"
+              dir="ltr"
+            />
+          </div>
+          <div className="md:col-span-2 flex justify-end mt-2">
+            <button
+              type="submit"
+              disabled={saving}
+              className="bg-stone-800 hover:bg-stone-700 text-white px-6 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2"
+            >
+              <Key className="w-4 h-4" />
+              <span>بروزرسانی رمز عبور</span>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* VIP Security */}
+      <div className="bg-white p-6 rounded-2xl border border-stone-200/60 shadow-sm space-y-5">
+        <h3 className="text-sm font-bold text-stone-900 border-b border-stone-100 pb-3 flex items-center gap-2">
+          <Key className="w-4 h-4 text-amber-500" />
+          <span>کلمه عبور یکپارچه ورود کاربران VIP</span>
+        </h3>
+        <p className="text-stone-400 text-[10px] leading-relaxed">
+          این کلمه عبور به عنوان یک رمز عمومی و مشترک برای ورود سریع مشتریان ویژه به حساب باشگاه مشتریان استفاده می‌شود.
+        </p>
+        <form onSubmit={handleVipPasswordSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-stone-500 block">کلمه عبور VIP</label>
+            <input
+              type="text"
+              value={vipPassword}
+              onChange={(e) => setVipPassword(e.target.value)}
+              placeholder="مثال: vip123"
+              className="w-full text-xs font-medium border border-stone-200 p-3 rounded-xl bg-stone-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-stone-950/25 transition-all text-left"
+              dir="ltr"
+            />
+          </div>
+          <div className="flex justify-end mt-2">
+            <button
+              type="submit"
+              disabled={saving}
+              className="bg-amber-500 hover:bg-amber-600 text-stone-950 px-6 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2"
+            >
+              <Save className="w-4 h-4" />
+              <span>ذخیره رمز VIP</span>
+            </button>
+          </div>
+        </form>
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-6">
         
+        {/* Visual Settings section */}
+        <div className="bg-white p-6 rounded-2xl border border-stone-200/60 shadow-sm space-y-5">
+          <h3 className="text-sm font-bold text-stone-900 border-b border-stone-100 pb-3 flex items-center gap-2">
+            <span className="w-2.5 h-2.5 bg-rose-500 rounded-full" />
+            <span>تنظیمات ظاهری سایت (لوگو و تصاویر)</span>
+          </h3>
+
+          <div className="grid grid-cols-1 gap-6">
+            <div className="space-y-2">
+              <label className="text-[11px] font-bold text-stone-500 block flex items-center gap-1">
+                <LayoutTemplate className="w-3.5 h-3.5" />
+                <span>لوگوی سایت (لینک تصویر)</span>
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  name="site_logo"
+                  value={settings.site_logo || ""}
+                  onChange={handleChange}
+                  className="w-full text-xs font-mono border border-stone-200 p-3 rounded-xl bg-stone-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-stone-950/25 transition-all text-left"
+                  placeholder="https://example.com/logo.png"
+                  dir="ltr"
+                />
+                <label className="bg-stone-100 hover:bg-stone-200 text-stone-700 px-4 py-3 rounded-xl cursor-pointer text-xs font-bold transition-all whitespace-nowrap flex items-center shrink-0">
+                  آپلود عکس
+                  <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+                </label>
+              </div>
+              <p className="text-[10px] text-stone-400">در صورت خالی بودن، متن Modern Home نمایش داده می‌شود.</p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[11px] font-bold text-stone-500 block flex items-center gap-1">
+                <Image className="w-3.5 h-3.5" />
+                <span>تصاویر پس‌زمینه اصلی سایت (با ویرگول انگلیسی , جدا کنید)</span>
+              </label>
+              <div className="flex gap-2 items-start">
+                <textarea
+                  name="hero_images"
+                  rows={3}
+                  value={settings.hero_images || ""}
+                  onChange={handleChange}
+                  className="w-full text-xs font-mono border border-stone-200 p-3 rounded-xl bg-stone-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-stone-950/25 transition-all text-left leading-relaxed"
+                  placeholder="https://image1.jpg, https://image2.jpg"
+                  dir="ltr"
+                />
+                <label className="bg-stone-100 hover:bg-stone-200 text-stone-700 px-4 py-3 rounded-xl cursor-pointer text-xs font-bold transition-all whitespace-nowrap flex items-center shrink-0 h-[42px]">
+                  آپلود عکس
+                  <input type="file" accept="image/*" multiple onChange={handleHeroUpload} className="hidden" />
+                </label>
+              </div>
+              <p className="text-[10px] text-stone-400">برای ایجاد اسلایدر چند تصویر قرار دهید. می‌توانید خودتان آپلود کنید یا آدرس درج کنید.</p>
+            </div>
+          </div>
+        </div>
+
         {/* About Us section */}
         <div className="bg-white p-6 rounded-2xl border border-stone-200/60 shadow-sm space-y-5">
           <h3 className="text-sm font-bold text-stone-900 border-b border-stone-100 pb-3 flex items-center gap-2">
@@ -135,7 +405,7 @@ export default function AdminSettings() {
                 value={settings.about_title}
                 onChange={handleChange}
                 className="w-full text-xs font-medium border border-stone-200 p-3 rounded-xl bg-stone-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-stone-950/25 transition-all text-right"
-                placeholder="مثال: درباره گالری مبلمان مدرن هوم"
+                placeholder="مثال: درباره گالری مبلمان Modern Home"
               />
             </div>
 
@@ -222,7 +492,7 @@ export default function AdminSettings() {
         <div className="bg-white p-6 rounded-2xl border border-stone-200/60 shadow-sm space-y-5">
           <h3 className="text-sm font-bold text-stone-900 border-b border-stone-100 pb-3 flex items-center gap-2">
             <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full" />
-            <span>اتصال شبکه‌های اجتماعی مدرن هوم</span>
+            <span>اتصال شبکه‌های اجتماعی Modern Home</span>
           </h3>
 
           <p className="text-stone-400 text-[10px] leading-relaxed">

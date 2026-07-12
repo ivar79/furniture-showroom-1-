@@ -18,7 +18,7 @@ export default function About() {
       .finally(() => setLoading(false));
   }, []);
 
-  const title = settings?.about_title || "درباره گالری مبلمان مدرن هوم";
+  const title = settings?.about_title || "درباره گالری مبلمان Modern Home";
   const desc = settings?.about_desc || "ما محصول عینی نمی‌فروشیم — ما حلقه ارتباطی امن و وکیل شما با نمایشگا‌ه‌های ممتاز مبلمان کشور هستیم.";
   const content = settings?.about_content || "";
 

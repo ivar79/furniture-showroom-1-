@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { Product, Category } from "../types";
 import ProductCard from "../components/ProductCard";
-import { Search, SlidersHorizontal, Archive, Sofa, Calendar } from "lucide-react";
+import { Search, SlidersHorizontal, Archive, Sofa, Calendar, ChevronRight, ChevronLeft } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 export default function Products() {
@@ -12,6 +13,35 @@ export default function Products() {
   // Filtering States
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
+  
+  // Compare Feature States
+  const [compareList, setCompareList] = useState<any[]>([]);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const isCompareModalOpen = searchParams.get("compare") === "true";
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const setCompareModalOpen = (isOpen: boolean) => {
+    setSearchParams(prev => {
+      if (isOpen) {
+        prev.set("compare", "true");
+      } else {
+        prev.delete("compare");
+      }
+      return prev;
+    });
+  };
+
+  const toggleCompare = (item: any) => {
+    setCompareList(prev => {
+      if (prev.some(p => p.product.id === item.product.id)) {
+        return prev.filter(p => p.product.id !== item.product.id);
+      }
+      if (prev.length < 3) {
+        return [...prev, item];
+      }
+      return prev; // max 3
+    });
+  };
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -139,14 +169,19 @@ export default function Products() {
                 className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
               >
                 <AnimatePresence mode="popLayout">
-                  {filteredProducts.map((item) => (
-                    <ProductCard
-                      key={item.product.id}
-                      product={item.product}
-                      showroomName={item.showroomName}
-                      categoryName={item.categoryName}
-                    />
-                  ))}
+                  {filteredProducts.map((item) => {
+                    const isCompared = compareList.some(p => p.product.id === item.product.id);
+                    return (
+                      <ProductCard
+                        key={item.product.id}
+                        product={item.product}
+                        showroomName={item.showroomName}
+                        categoryName={item.categoryName}
+                        onCompareToggle={() => toggleCompare(item)}
+                        isCompared={isCompared}
+                      />
+                    );
+                  })}
                 </AnimatePresence>
               </motion.div>
             ) : (
@@ -172,6 +207,170 @@ export default function Products() {
         </div>
 
       </div>
+      
+      {/* Sticky Compare Bar */}
+      <AnimatePresence>
+        {compareList.length > 0 && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            className="fixed bottom-6 left-0 right-0 z-40 px-4 pointer-events-none"
+          >
+            <div className="max-w-2xl mx-auto bg-stone-900 text-stone-50 rounded-2xl shadow-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 pointer-events-auto border border-stone-800">
+              <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
+                <div className="flex items-center gap-3">
+                  <div className="flex -space-x-2 space-x-reverse">
+                    {compareList.map((c, i) => (
+                      <div key={i} className="w-10 h-10 rounded-full border-2 border-stone-900 overflow-hidden bg-stone-800 shrink-0">
+                        <img src={c.product.images?.[0]} alt={c.product.name} className="w-full h-full object-cover" />
+                      </div>
+                    ))}
+                    {compareList.length < 3 && (
+                      <div className="w-10 h-10 rounded-full border-2 border-stone-800 border-dashed flex items-center justify-center text-stone-500 bg-stone-900 shrink-0">
+                        +
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-right pr-2">
+                    <p className="text-sm font-bold">{compareList.length} مبل انتخاب شده</p>
+                    <p className="text-xs text-stone-400 hidden sm:block">حداکثر ۳ مورد برای مقایسه</p>
+                  </div>
+                </div>
+                
+                {/* On mobile, show cancel button here */}
+                <button
+                  onClick={() => setCompareList([])}
+                  className="sm:hidden text-stone-400 hover:text-stone-300 text-xs px-2"
+                >
+                  انصراف
+                </button>
+              </div>
+              
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <button
+                  onClick={() => setCompareList([])}
+                  className="hidden sm:block text-stone-400 hover:text-stone-300 text-xs px-2"
+                >
+                  انصراف
+                </button>
+                <button
+                  onClick={() => setCompareModalOpen(true)}
+                  disabled={compareList.length < 2}
+                  className={`w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                    compareList.length >= 2
+                      ? "bg-amber-500 text-stone-950 hover:bg-amber-400"
+                      : "bg-stone-800 text-stone-500 cursor-not-allowed"
+                  }`}
+                >
+                  مقایسه محصولات
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Compare Modal */}
+      <AnimatePresence>
+        {isCompareModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/80 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-3xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl"
+            >
+              <div className="flex items-center justify-between p-6 border-b border-stone-100 bg-stone-50/50">
+                <div>
+                  <h2 className="text-xl font-black text-stone-900">مقایسه تخصصی مبلمان</h2>
+                  <p className="text-xs text-stone-500 mt-1">تفاوت‌ها را با دقت بررسی کنید</p>
+                </div>
+                <button
+                  onClick={() => setCompareModalOpen(false)}
+                  className="w-10 h-10 bg-white border border-stone-200 rounded-full flex items-center justify-center text-stone-500 hover:text-stone-900 hover:bg-stone-50 transition-colors shadow-sm"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <div className="flex-1 overflow-auto p-6">
+                <div ref={scrollRef} className="flex md:grid gap-6 overflow-x-auto snap-x snap-mandatory pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']" style={{ gridTemplateColumns: `repeat(${compareList.length}, minmax(0, 1fr))` }}>
+                  {compareList.map((item, idx) => (
+                    <div key={idx} className="flex flex-col space-y-6 min-w-[260px] md:min-w-0 snap-start h-full">
+                      <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-stone-100 border border-stone-200/50">
+                        <img src={item.product.images?.[0]} alt={item.product.name} className="w-full h-full object-cover" />
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <p className="text-xs font-bold text-amber-600">{item.categoryName}</p>
+                        <h3 className="text-lg font-black text-stone-900">{item.product.name}</h3>
+                        <p className="text-sm font-bold text-stone-600 border-b border-stone-100 pb-4">
+                          {new Intl.NumberFormat("fa-IR").format(item.product.basePrice)} تومان
+                        </p>
+                      </div>
+
+                      <div className="space-y-3 pt-2">
+                        <div>
+                          <p className="text-[10px] text-stone-400 mb-1 uppercase tracking-wider font-bold">متریال و کلاف</p>
+                          <p className="text-sm text-stone-800 font-medium bg-stone-50 p-3 rounded-xl border border-stone-100">
+                            {item.product.material || "نامشخص"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-stone-400 mb-1 uppercase tracking-wider font-bold">نوع پارچه</p>
+                          <p className="text-sm text-stone-800 font-medium bg-stone-50 p-3 rounded-xl border border-stone-100">
+                            {item.product.fabricType || "نامشخص"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-stone-400 mb-1 uppercase tracking-wider font-bold">محل بازدید فیزیکی</p>
+                          <p className="text-sm text-stone-800 font-medium bg-stone-50 p-3 rounded-xl border border-stone-100">
+                            {item.showroomName}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-auto pt-4">
+                        <Link
+                          to={`/product/${item.product.slug}`}
+                          className="w-full inline-flex justify-center items-center bg-stone-900 text-white text-xs font-bold py-3 px-4 rounded-xl hover:bg-stone-800 transition-colors"
+                        >
+                          خرید و هماهنگی بازدید
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Mobile Scroll Controls */}
+              <div className="md:hidden flex items-center justify-between px-6 pb-6 border-t border-stone-100 pt-4 bg-stone-50/50">
+                <button 
+                  onClick={() => scrollRef.current?.scrollBy({ left: 320, behavior: 'smooth' })}
+                  className="w-10 h-10 rounded-full bg-white border border-stone-200 shadow-sm flex items-center justify-center text-stone-600 hover:bg-stone-50 hover:text-stone-900 transition-all"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+                <p className="text-xs font-medium text-stone-500">مشاهده محصولات بعدی</p>
+                <button 
+                  onClick={() => scrollRef.current?.scrollBy({ left: -320, behavior: 'smooth' })}
+                  className="w-10 h-10 rounded-full bg-white border border-stone-200 shadow-sm flex items-center justify-center text-stone-600 hover:bg-stone-50 hover:text-stone-900 transition-all"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

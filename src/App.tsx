@@ -21,6 +21,7 @@ import AdminShowrooms from "./pages/AdminShowrooms";
 import AdminCommissions from "./pages/AdminCommissions";
 import AdminSettings from "./pages/AdminSettings";
 import AdminCustomers from "./pages/AdminCustomers";
+import Wishlist from "./pages/Wishlist";
 
 // Icons for Admin Sidebar
 import { LayoutDashboard, ShoppingCart, Sofa, Store, Receipt, LogOut, ChevronLeft, Menu, Settings, Users } from "lucide-react";
@@ -56,6 +57,7 @@ function MainLayout() {
           <Route path="/" element={<Home />} />
           <Route path="/products" element={<Products />} />
           <Route path="/product/:slug" element={<ProductDetail />} />
+          <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/customer-club" element={<CustomerClub />} />
@@ -126,7 +128,7 @@ function AdminWorkspaceLayout() {
               MH
             </div>
             <div className="text-right leading-none space-y-1">
-              <h2 className="text-xs font-extrabold text-stone-50">پنل مدرن هوم (MH)</h2>
+              <h2 className="text-xs font-extrabold text-stone-50">پنل Modern Home (MH)</h2>
               <span className="text-[10px] text-stone-400 font-light block">سیستم واسطه‌گری دکور</span>
             </div>
           </div>
@@ -174,7 +176,7 @@ function AdminWorkspaceLayout() {
             to="/"
             className="w-full text-right text-[10px] text-stone-500 hover:text-stone-300 block font-light"
           >
-            صفحه اصلی شووروم عمومی
+            صفحه اصلی سایت عمومی
           </Link>
           <button
             onClick={handleLogout}
@@ -197,7 +199,7 @@ function AdminWorkspaceLayout() {
           >
             <Menu className="w-6 h-6" />
           </button>
-          <span className="text-xs font-bold">پنل مدیریت مدرن هوم</span>
+          <span className="text-xs font-bold">پنل مدیریت Modern Home</span>
           <div className="w-8 h-8 rounded-lg bg-stone-800 flex items-center justify-center text-[10px] font-sans">
             ADM
           </div>

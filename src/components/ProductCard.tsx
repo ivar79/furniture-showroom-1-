@@ -1,16 +1,22 @@
 import { Link } from "react-router-dom";
 import { Product } from "../types";
-import { ArrowLeft, Sparkles, Store } from "lucide-react";
+import { ArrowLeft, Sparkles, Store, Heart, Scale } from "lucide-react";
 import { motion } from "motion/react";
+import { useWishlist } from "../hooks/useWishlist";
 
 interface ProductCardProps {
   key?: string | number;
   product: Product;
   showroomName: string;
   categoryName: string;
+  onCompareToggle?: (product: any) => void;
+  isCompared?: boolean;
 }
 
-export default function ProductCard({ product, showroomName, categoryName }: ProductCardProps) {
+export default function ProductCard({ product, showroomName, categoryName, onCompareToggle, isCompared }: ProductCardProps) {
+  const { toggleWishlist, isInWishlist } = useWishlist();
+  const isWishlisted = isInWishlist(product.id);
+
   // Safe helper to format prices beautifully to Iranian Tomans
   const formatToman = (amount: number) => {
     return new Intl.NumberFormat("fa-IR", {
@@ -27,7 +33,7 @@ export default function ProductCard({ product, showroomName, categoryName }: Pro
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.4 }}
-      className="group flex flex-col bg-white border border-stone-200/60 rounded-3xl overflow-hidden hover:shadow-lg transition-all duration-300 transform"
+      className={`group flex flex-col bg-white border ${isCompared ? 'border-amber-500 shadow-md shadow-amber-500/10' : 'border-stone-200/60 hover:shadow-lg'} rounded-3xl overflow-hidden transition-all duration-300 transform`}
     >
       {/* Product Image Stage */}
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-stone-100">
@@ -37,11 +43,47 @@ export default function ProductCard({ product, showroomName, categoryName }: Pro
           className="h-full w-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
           referrerPolicy="no-referrer"
         />
+        
+        {/* Wishlist Button */}
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleWishlist(product.id);
+          }}
+          className={`absolute top-4 left-4 p-2 rounded-full backdrop-blur-md transition-all duration-300 ${
+            isWishlisted
+              ? "bg-rose-500/90 text-white shadow-lg shadow-rose-500/20 scale-110"
+              : "bg-stone-900/40 text-white hover:bg-stone-900/60 hover:scale-110"
+          }`}
+          aria-label="Toggle Wishlist"
+        >
+          <Heart className={`w-4 h-4 ${isWishlisted ? "fill-current" : ""}`} />
+        </button>
+
+        {/* Compare Toggle Button */}
+        {onCompareToggle && (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onCompareToggle(product);
+            }}
+            className={`absolute top-14 left-4 p-2 rounded-full backdrop-blur-md transition-all duration-300 ${
+              isCompared
+                ? "bg-amber-500/90 text-white shadow-lg shadow-amber-500/20 scale-110"
+                : "bg-stone-900/40 text-white hover:bg-stone-900/60 hover:scale-110"
+            }`}
+            title="افزودن به مقایسه"
+          >
+            <Scale className={`w-4 h-4 ${isCompared ? "text-white" : ""}`} />
+          </button>
+        )}
 
         {product.isFeatured && (
           <div className="absolute top-4 right-4 bg-stone-900/90 backdrop-blur-sm text-stone-50 text-[10px] sm:text-xs px-3 py-1.5 rounded-full font-medium flex items-center gap-1.5">
             <Sparkles className="w-3 h-3 text-amber-400" />
-            <span>پیشنهاد مشاور</span>
+            <span>سفارشی / ویژه</span>
           </div>
         )}
 

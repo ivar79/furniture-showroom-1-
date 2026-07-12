@@ -21,6 +21,12 @@ export interface Category {
   isActive: boolean;
 }
 
+export interface ColorVariant {
+  name: string;
+  image?: string; // swatches or small color preview
+  productImage?: string; // main product image with this color
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -29,6 +35,7 @@ export interface Product {
   basePrice: number;
   images: string[];
   colors: string[];
+  colorVariants?: ColorVariant[] | null;
   material: string | null;
   dimensions: string | null;
   fabricType: string | null;

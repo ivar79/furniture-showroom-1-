@@ -20,6 +20,7 @@ export default function AdminProducts() {
   const [basePrice, setBasePrice] = useState("");
   const [images, setImages] = useState("");
   const [colors, setColors] = useState("");
+  const [colorVariants, setColorVariants] = useState<{name: string, image?: string, productImage?: string}[]>([]);
   const [material, setMaterial] = useState("چوب چنار و پارچه مسکو نانو");
   const [dimensions, setDimensions] = useState("طول: ۲۲۰ سانتی‌متر - عرض: ۹۰ سانتی‌متر");
   const [fabricType, setFabricType] = useState("میکروفایبر ضد لک");
@@ -148,6 +149,7 @@ export default function AdminProducts() {
     setBasePrice("");
     setImages("");
     setColors("");
+    setColorVariants([]);
     setMaterial("چوب چنار و پارچه مسکو نانو");
     setDimensions("طول: ۲۲۰ - عرض: ۹۰ سانتی‌متر");
     setFabricType("میکروفایبر ضد لک");
@@ -169,6 +171,7 @@ export default function AdminProducts() {
     setBasePrice(String(p.basePrice));
     setImages(p.images?.join(", ") || "");
     setColors(p.colors?.join("، ") || "");
+    setColorVariants(p.colorVariants || []);
     setMaterial(p.material || "");
     setDimensions(p.dimensions || "");
     setFabricType(p.fabricType || "");
@@ -207,7 +210,7 @@ export default function AdminProducts() {
     }
 
     const parsedImages = images.split(",").map(i => i.trim()).filter(Boolean);
-    const parsedColors = colors.split(/[،,]/).map(c => c.trim()).filter(Boolean);
+    const parsedColors = colorVariants.map(v => v.name).filter(Boolean);
 
     const payload = {
       name,
@@ -216,6 +219,7 @@ export default function AdminProducts() {
       basePrice,
       images: parsedImages,
       colors: parsedColors,
+      colorVariants,
       material,
       dimensions,
       fabricType,
@@ -373,16 +377,82 @@ export default function AdminProducts() {
                 </select>
               </div>
 
-              {/* Colors array */}
-              <div className="space-y-1.5 col-span-1">
-                <label className="text-xs font-bold text-stone-600">کالیته‌های رنگ (با ویرگول الک کنید)</label>
-                <input
-                  type="text"
-                  placeholder="طوسی، کرم، سرمه‌ای، یاقوتی"
-                  value={colors}
-                  onChange={(e) => setColors(e.target.value)}
-                  className="w-full text-right bg-stone-50 border border-stone-200 rounded-xl py-2 px-3 text-xs text-stone-900 focus:outline-none"
-                />
+              {/* Advanced Color Variants Manager */}
+              <div className="col-span-1 sm:col-span-3 space-y-3 bg-stone-50 border border-stone-200 rounded-2xl p-4">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-bold text-stone-800">مدیریت کالیته‌ها و رنگ‌های موجود</label>
+                  <button
+                    type="button"
+                    onClick={() => setColorVariants([...colorVariants, { name: "", image: "", productImage: "" }])}
+                    className="flex items-center gap-1 bg-stone-900 text-white text-[10px] px-3 py-1.5 rounded-lg hover:bg-stone-800"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>افزودن رنگ جدید</span>
+                  </button>
+                </div>
+                
+                {colorVariants.length === 0 ? (
+                  <div className="text-center py-4 text-stone-400 text-xs">هیچ رنگی ثبت نشده است.</div>
+                ) : (
+                  <div className="space-y-3">
+                    {colorVariants.map((variant, idx) => (
+                      <div key={idx} className="flex flex-col md:flex-row gap-3 bg-white p-3 rounded-xl border border-stone-200 items-start md:items-center">
+                        <div className="w-full md:w-1/4">
+                          <input
+                            type="text"
+                            placeholder="نام رنگ (مثلا: طوسی گونی‌بافت)"
+                            value={variant.name}
+                            onChange={(e) => {
+                              const newV = [...colorVariants];
+                              newV[idx].name = e.target.value;
+                              setColorVariants(newV);
+                            }}
+                            className="w-full text-right bg-stone-50 border border-stone-200 rounded-lg py-2 px-2 text-xs focus:outline-none focus:border-stone-400"
+                          />
+                        </div>
+                        <div className="w-full md:w-1/3">
+                          <input
+                            type="text"
+                            placeholder="لینک تصویر مبل با این رنگ"
+                            value={variant.productImage || ""}
+                            onChange={(e) => {
+                              const newV = [...colorVariants];
+                              newV[idx].productImage = e.target.value;
+                              setColorVariants(newV);
+                            }}
+                            className="w-full text-left bg-stone-50 border border-stone-200 rounded-lg py-2 px-2 text-xs focus:outline-none focus:border-stone-400 font-mono text-[10px]"
+                            dir="ltr"
+                          />
+                        </div>
+                        <div className="w-full md:w-1/3">
+                          <input
+                            type="text"
+                            placeholder="لینک تصویر کالیته/پارچه (اختیاری)"
+                            value={variant.image || ""}
+                            onChange={(e) => {
+                              const newV = [...colorVariants];
+                              newV[idx].image = e.target.value;
+                              setColorVariants(newV);
+                            }}
+                            className="w-full text-left bg-stone-50 border border-stone-200 rounded-lg py-2 px-2 text-xs focus:outline-none focus:border-stone-400 font-mono text-[10px]"
+                            dir="ltr"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newV = [...colorVariants];
+                            newV.splice(idx, 1);
+                            setColorVariants(newV);
+                          }}
+                          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
             </div>
@@ -571,7 +641,7 @@ export default function AdminProducts() {
                 />
                 <label htmlFor="isFeatured" className="text-xs font-bold text-stone-700 cursor-pointer select-none flex items-center gap-1">
                   <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                  <span>پیشنهاد برتر دکوراسیون (Featured)</span>
+                  <span>مبلمان سفارشی / نمایش در محصولات ویژه (Featured)</span>
                 </label>
               </div>
 
@@ -584,7 +654,7 @@ export default function AdminProducts() {
                   className="w-4 h-4 text-stone-950 border-stone-300 rounded focus:ring-stone-950 accent-stone-950"
                 />
                 <label htmlFor="isActive" className="text-xs font-bold text-stone-700 cursor-pointer select-none">
-                  فروش فعال در شووروم عمومی سایت
+                  فروش فعال در سایت عمومی سایت
                 </label>
               </div>
             </div>
@@ -677,7 +747,7 @@ export default function AdminProducts() {
                       <td className="px-4 py-3 space-x-1 space-y-1">
                         {p.isFeatured && (
                           <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 px-2 py-0.5 rounded-md text-[10px] font-bold">
-                            ویژه
+                            سفارشی / ویژه
                           </span>
                         )}
                         {p.isActive ? (

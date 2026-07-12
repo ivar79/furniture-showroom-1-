@@ -2,13 +2,15 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Product, Category } from "../types";
 import ProductCard from "../components/ProductCard";
-import { ArrowLeft, Sparkles, Sofa, Shield, Compass, BadgeCheck, PhoneCall, ChevronLeft, Percent, Scale, Layers, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Sparkles, Sofa, Shield, Compass, BadgeCheck, PhoneCall, ChevronLeft, Percent, Scale, Layers, ShieldCheck, Headset, WalletCards } from "lucide-react";
 import { motion } from "motion/react";
 
 export default function Home() {
   const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [settings, setSettings] = useState<any>({});
   const [loading, setLoading] = useState(true);
+  const [heroImageIndex, setHeroImageIndex] = useState(0);
 
   useEffect(() => {
     // Scroll to top
@@ -27,6 +29,12 @@ export default function Home() {
         if (catData.success) {
           setCategories(catData.categories);
         }
+
+        const setRes = await fetch("/api/settings");
+        const setData = await setRes.json();
+        if (setData.success) {
+          setSettings(setData.settings);
+        }
       } catch (err) {
         console.error("Home loading error:", err);
       } finally {
@@ -37,19 +45,38 @@ export default function Home() {
     fetchData();
   }, []);
 
+  // Parse hero images
+  const heroImages = settings.hero_images 
+    ? settings.hero_images.split(',').map((img: string) => img.trim()).filter(Boolean) 
+    : ["https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=1600&auto=format&fit=crop&q=80"];
+
+  useEffect(() => {
+    if (heroImages.length > 1) {
+      const interval = setInterval(() => {
+        setHeroImageIndex((prev) => (prev + 1) % heroImages.length);
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [heroImages.length]);
+
   return (
     <div className="bg-stone-50 min-h-screen text-stone-900 pb-20">
       
       {/* 1. Hero Section */}
-      <section className="relative h-[90vh] flex items-center justify-center overflow-hidden bg-stone-950">
+      <section className="relative h-[90vh] flex items-center justify-center overflow-hidden bg-stone-900">
         <div className="absolute inset-0 z-0">
-          <img
-            src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=1600&auto=format&fit=crop&q=80"
-            alt="Luxury Sofa"
-            className="w-full h-full object-cover opacity-35"
-            referrerPolicy="no-referrer"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/70 to-transparent" />
+          {heroImages.map((img: string, idx: number) => (
+            <img
+              key={idx}
+              src={img}
+              alt="Luxury Sofa"
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
+                idx === heroImageIndex ? "opacity-60" : "opacity-0"
+              }`}
+              referrerPolicy="no-referrer"
+            />
+          ))}
+          <div className="absolute inset-0 bg-stone-950/40 sm:bg-gradient-to-t sm:from-stone-950/80 sm:via-stone-950/30 sm:to-stone-950/10" />
         </div>
 
         <div className="relative z-10 max-w-5xl mx-auto px-4 text-center space-y-8 select-none">
@@ -60,103 +87,81 @@ export default function Home() {
             className="flex items-center justify-center gap-1.5 self-center mx-auto bg-stone-100/10 text-stone-300 border border-stone-100/20 px-4 py-1.5 rounded-full w-fit text-sm"
           >
             <Sparkles className="w-4 h-4 text-amber-400" />
-            <span>پلتفرم واسطه‌گری مبلمان لوکس و ژورنالی</span>
+            <span>پلتفرم تخصصی مقایسه و مشاوره مبلمان لوکس</span>
           </motion.div>
 
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.15 }}
-            className="text-4xl sm:text-6xl font-extrabold text-stone-50 tracking-tight leading-tight"
+            className="text-3xl sm:text-5xl md:text-6xl font-extrabold text-stone-50 leading-[1.4] sm:leading-[1.25] px-4"
           >
-            مبلمان لوکس، مستقیم از نمایشگاه
+            مبلمان لوکس؛ خرید مطمئن، با شرایط اقساطی
           </motion.h1>
 
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.3 }}
-            className="text-stone-300 text-base sm:text-lg max-w-2xl mx-auto font-light leading-relaxed"
+            className="text-stone-100 text-sm sm:text-base md:text-lg max-w-2xl mx-auto font-normal leading-[1.8] sm:leading-[1.9] px-6 sm:px-0"
           >
-            ما واسطه‌ و مشاور تخصصی شما هستیم. بهترین مبلمان برند را بدون دردسر، با پورسانت منصفانه و بهترین شرایط قیمتی مستقیم از معتبرترین نمایشگاه‌ها هماهنگ می‌کنیم.
+            ما در انتخاب بهترین مبلمان همراه شما هستیم. مشاوره‌ی تخصصی، مقایسه‌ی برندهای معتبر و تضمین بهترین شرایط قیمتی برای خلق خانه‌ای رویایی.
           </motion.p>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.45 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4"
+            className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 pt-6 sm:pt-4 w-full px-6 sm:px-0"
           >
             <Link
               to="/products"
-              className="w-full sm:w-auto bg-stone-50 hover:bg-stone-200 text-stone-950 px-8 py-4 rounded-2xl text-sm font-semibold transition-all shadow-lg flex items-center justify-center gap-2"
+              className="w-full sm:w-auto bg-stone-50 hover:bg-stone-200 text-stone-950 px-6 sm:px-8 py-3.5 sm:py-4 rounded-2xl text-sm sm:text-base font-semibold transition-all shadow-lg flex items-center justify-center gap-2"
             >
               <span>مشاهده گالری مبل‌ها</span>
               <ArrowLeft className="w-4 h-4" />
             </Link>
             <Link
               to="/about"
-              className="w-full sm:w-auto bg-stone-900/40 hover:bg-stone-900/60 border border-stone-800 text-stone-100 px-8 py-4 rounded-2xl text-sm font-medium transition-all flex items-center justify-center gap-2"
+              className="w-full sm:w-auto bg-stone-900/40 hover:bg-stone-900/60 border border-stone-800 text-stone-100 px-6 sm:px-8 py-3.5 sm:py-4 rounded-2xl text-sm sm:text-base font-medium transition-all flex items-center justify-center gap-2 backdrop-blur-sm"
             >
-              <span>نحوه هماهنگی واسطه‌گری</span>
+              <span>درخواست مشاوره رایگان</span>
             </Link>
           </motion.div>
         </div>
       </section>
 
-      {/* 2. Top Brands Tagline / Why furniture-showroom */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 sm:mt-24 text-right">
-        <div className="text-center max-w-2xl mx-auto mb-12 space-y-2">
-          <span className="text-xs bg-amber-100 text-stone-900 px-3 py-1 rounded-full font-extrabold border border-amber-200">
-            مزایای انحصاری ثبت سفارش در مدرن هوم
-          </span>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-stone-900 leading-tight">
-            چرا نباید فیزیکی و مستقیم از نمایشگاه‌ها خرید کنیم؟
-          </h2>
-          <p className="text-stone-400 text-xs font-light leading-relaxed">
-            مراجعه مستقیم بدلیل عدم نظارت پلتفرم معمولاً منجر به از دست رفتن تخفیف‌ها، تأخیر در تحویل بدون عودت جریمه و یا افت ناخواسته کیفیت متریال ساخت (اسفنج و کلاف) می‌شود.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {/* 2. Platform Features */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 sm:mt-16 text-right">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
           
-          <div className="flex flex-col gap-3 p-6 bg-white border border-stone-200/50 rounded-3xl text-right">
-            <div className="w-11 h-11 bg-amber-100/50 text-stone-900 flex items-center justify-center shrink-0 rounded-2xl mx-auto md:mx-0">
-              <Percent className="w-5 h-5 text-amber-900" />
+          <div className="flex flex-col gap-4 p-8 bg-white border border-stone-200/50 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
+            <div className="w-12 h-12 bg-stone-100 text-stone-900 flex items-center justify-center shrink-0 rounded-2xl mx-auto md:mx-0">
+              <Headset className="w-6 h-6 text-stone-700" />
             </div>
-            <div className="space-y-1.5">
-              <h3 className="text-sm font-bold text-stone-900">۵٪ تخفیف انحصاری پلتفرم</h3>
-              <p className="text-xs text-stone-400 leading-relaxed font-light">بواسطه قراردادهای کلان، رقم مندرج در فاکتور شما ۵٪ ارزان‌تر از خرید حضوری و فیزیکی از همان نمایشگاه خواهد بود.</p>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3 p-6 bg-white border border-stone-200/50 rounded-3xl text-right">
-            <div className="w-11 h-11 bg-amber-100/50 text-stone-900 flex items-center justify-center shrink-0 rounded-2xl mx-auto md:mx-0">
-              <Layers className="w-5 h-5 text-amber-900" />
-            </div>
-            <div className="space-y-1.5">
-              <h3 className="text-sm font-bold text-stone-900">QC و کارشناسی متریال در کارگاه</h3>
-              <p className="text-xs text-stone-400 leading-relaxed font-light">ناظران فنی ما فیزیکاً ساختار مبل (چوب روس، کلاف و اسفنج ۳۵ کیلویی تایید شده) را پیش از خروج بررسی و پلمپ می‌کنند.</p>
+            <div className="space-y-2 text-center md:text-right">
+              <h3 className="text-lg font-bold text-stone-900">مشاوره تخصصی</h3>
+              <p className="text-sm text-stone-500 leading-relaxed font-normal">راهنمایی دقیق برای انتخاب سبک، رنگ و متریال متناسب با دکوراسیون منزل شما توسط کارشناسان معماری داخلی.</p>
             </div>
           </div>
 
-          <div className="flex flex-col gap-3 p-6 bg-white border border-stone-200/50 rounded-3xl text-right">
-            <div className="w-11 h-11 bg-amber-100/50 text-stone-900 flex items-center justify-center shrink-0 rounded-2xl mx-auto md:mx-0">
-              <Sparkles className="w-5 h-5 text-amber-900" />
+          <div className="flex flex-col gap-4 p-8 bg-white border border-stone-200/50 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
+            <div className="w-12 h-12 bg-stone-100 text-stone-900 flex items-center justify-center shrink-0 rounded-2xl mx-auto md:mx-0">
+              <Scale className="w-6 h-6 text-stone-700" />
             </div>
-            <div className="space-y-1.5">
-              <h3 className="text-sm font-bold text-stone-900">مشاوره دکوراسیون و رندر ۳بعدی</h3>
-              <p className="text-xs text-stone-400 leading-relaxed font-light">رنگ‌بندی پارچه و ابعاد دقیق مبل کاندید شده را به صورت کاملاً رایگان با دکوراسیون و والپیپر منزل شما مطابقت می‌دهیم.</p>
+            <div className="space-y-2 text-center md:text-right">
+              <h3 className="text-lg font-bold text-stone-900">مقایسه شفاف</h3>
+              <p className="text-sm text-stone-500 leading-relaxed font-normal">بررسی و مقایسه بی‌طرفانه کیفیت و قیمت محصولات برترین برندها و نمایشگاه در کنار هم برای خریدی آگاهانه.</p>
             </div>
           </div>
 
-          <div className="flex flex-col gap-3 p-6 bg-white border border-stone-200/50 rounded-3xl text-right">
-            <div className="w-11 h-11 bg-amber-100/50 text-stone-900 flex items-center justify-center shrink-0 rounded-2xl mx-auto md:mx-0">
-              <Scale className="w-5 h-5 text-amber-900" />
+          <div className="flex flex-col gap-4 p-8 bg-white border border-stone-200/50 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
+            <div className="w-12 h-12 bg-stone-100 text-stone-900 flex items-center justify-center shrink-0 rounded-2xl mx-auto md:mx-0">
+              <WalletCards className="w-6 h-6 text-stone-700" />
             </div>
-            <div className="space-y-1.5">
-              <h3 className="text-sm font-bold text-stone-900">حمایت حقوقی و جریمه زمان تحویل</h3>
-              <p className="text-xs text-stone-400 leading-relaxed font-light">پلتفرم از طرف شما به عنوان خریدار، حکم رسمی قرار داده و در صورت تاخیر نمایشگاه، جریمه روزشمار کتبی عودت می‌دهد.</p>
+            <div className="space-y-2 text-center md:text-right">
+              <h3 className="text-lg font-bold text-stone-900">شرایط اقساطی</h3>
+              <p className="text-sm text-stone-500 leading-relaxed font-normal">امکان خرید مبلمان لوکس و با کیفیت بالا از طریق پرداخت‌های منعطف و شرایط اقساطی.</p>
             </div>
           </div>
 
@@ -167,7 +172,7 @@ export default function Home() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-20 sm:mt-28">
         <div className="flex justify-between items-end mb-10">
           <div className="space-y-2 text-right">
-            <div className="flex items-center gap-1.5 justify-start text-stone-400 text-xs font-bold tracking-wider uppercase">
+            <div className="flex items-center gap-1.5 justify-start text-stone-400 text-xs font-bold uppercase">
               <Sofa className="w-4 h-4 text-stone-400" />
               <span>مبلمان برگزیده هفته</span>
             </div>
@@ -219,12 +224,12 @@ export default function Home() {
           </div>
 
           <div className="relative z-10 space-y-4 max-w-lg text-right">
-            <span className="text-xs font-bold text-stone-300 uppercase tracking-widest flex items-center gap-1.5 justify-start">
+            <span className="text-xs font-bold text-stone-300 uppercase flex items-center gap-1.5 justify-start">
               <BadgeCheck className="w-4 h-4 text-amber-400" />
               تضمین کیفیت و اصالت
             </span>
             <h3 className="text-2xl sm:text-3xl font-extrabold text-stone-50">خرید مبل بی‌دردسر و ایمن</h3>
-            <p className="text-xs sm:text-sm text-stone-300 font-light leading-relaxed">
+            <p className="text-xs sm:text-sm text-stone-300 font-normal leading-[1.8] sm:leading-[1.9]">
               دیگر نگران بدعهدی نمایشگاه‌ها یا گران‌فروشی مبل در یافت‌آباد نباشید. کلیه فرآیندهای مالی، برآورد قیمت نهایی و بررسی‌های فنی به عنوان وکیل قانونی و راهنمای خرید شما انجام می‌شود.
             </p>
           </div>
