@@ -3,18 +3,19 @@ import pg from "pg";
 import * as schema from "./schema.js";
 import dotenv from "dotenv";
 
-dotenv.config();
+dotenv.config({ override: true });
 
 const { Pool } = pg;
-
 let dbInstance: any = null;
 
 export function getDb() {
   if (!dbInstance) {
     const databaseUrl =
-      process.env.DATABASE_URL ||
+      process.env.modernhome_DATABASE_URL ||
+      process.env.modernhome_POSTGRES_URL ||
+      process.env.POSTGRES_URL ||
       process.env.NEON_DATABASE_URL ||
-      process.env.modernhome_DATABASE_URL;
+      process.env.DATABASE_URL;
 
     let pool;
     if (databaseUrl) {
@@ -33,7 +34,7 @@ export function getDb() {
 
       if (!host || !database || !user || !password) {
         throw new Error(
-          "Database configuration environment variables are missing.",
+          "Database configuration environment variables are missing."
         );
       }
 
@@ -51,5 +52,6 @@ export function getDb() {
 
     dbInstance = drizzle(pool, { schema });
   }
+
   return dbInstance;
 }
