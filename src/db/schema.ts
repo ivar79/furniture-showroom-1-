@@ -163,3 +163,11 @@ export const customerConnections = pgTable('customer_connections', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
+
+export const otps = pgTable('otps', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  phone: text('phone').notNull().unique(),
+  code: text('code').notNull(),
+  expiresAt: timestamp('expires_at').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});

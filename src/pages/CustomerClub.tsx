@@ -134,6 +134,7 @@ export default function CustomerClub() {
         setCustomerData(data.customer);
         setOrders(data.orders || []);
         localStorage.setItem("customerClubPhone", phoneInput.trim());
+        localStorage.setItem("customerToken", data.token);
         setNotification(null);
         setOtpSent(false);
         setOtpCodeInput("");
@@ -184,9 +185,13 @@ export default function CustomerClub() {
     try {
       setLoading(true);
       setError(null);
+      const token = localStorage.getItem("customerToken");
       const res = await fetch("/api/customer/portal", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": token ? `Bearer ${token}` : ""
+        },
         body: JSON.stringify({ phone })
       });
       const data = await res.json();

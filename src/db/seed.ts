@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import bcryptjs from "bcryptjs";
 import { getDb } from "./index.js";
 import { admins, showrooms, categories, products } from "./schema.js";
@@ -13,12 +14,13 @@ export async function runSeed() {
     const existingAdmins = await db.select().from(admins).limit(1);
     if (existingAdmins.length === 0) {
       console.log("No admin found. Creating default admin...");
-      const hashedPassword = await bcryptjs.hash("admin123", 12);
+      const randomPass = crypto.randomBytes(12).toString("base64");
+      console.log(`[FIRST RUN] Admin password: ${randomPass}`);
+      const hashedPassword = await bcryptjs.hash(randomPass, 12);
       await db.insert(admins).values({
         username: "admin",
         password: hashedPassword,
       });
-      console.log("Admin created successfully! (User: admin, Pass: admin123)");
     } else {
       console.log("Admin already exists.");
     }

@@ -1,3 +1,4 @@
+import { adminFetch } from "../adminFetch";
 import React, { useState, useEffect } from "react";
 import { Users, ShieldCheck, Search, Filter, Percent, Layers, Sparkles, Scale, RefreshCw, Sliders, CheckCircle, Clock } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
@@ -39,7 +40,7 @@ export default function AdminCustomers() {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch("/api/admin/customers");
+      const res = await adminFetch("/api/admin/customers");
       const data = await res.json();
       if (data.success) {
         setCustomers(data.customers);
@@ -62,7 +63,7 @@ export default function AdminCustomers() {
   const handleToggleVip = async (phone: string, currentIsVip: boolean) => {
     try {
       setActionLoading(phone);
-      const res = await fetch("/api/admin/customers/vip", {
+      const res = await adminFetch("/api/admin/customers/vip", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone, isVip: !currentIsVip })
@@ -101,7 +102,7 @@ export default function AdminCustomers() {
 
     try {
       setUpdatingThreshold(true);
-      const res = await fetch("/api/admin/customers/vip-threshold", {
+      const res = await adminFetch("/api/admin/customers/vip-threshold", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ threshold: thresholdNum })
@@ -126,7 +127,7 @@ export default function AdminCustomers() {
     try {
       setLoadingOrders(true);
       setCustomerOrders([]);
-      const res = await fetch("/api/customer/portal", {
+      const res = await adminFetch("/api/customer/portal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone })

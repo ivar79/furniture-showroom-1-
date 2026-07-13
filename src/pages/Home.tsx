@@ -79,7 +79,13 @@ export default function Home() {
           <div className="absolute inset-0 bg-stone-950/40 sm:bg-gradient-to-t sm:from-stone-950/80 sm:via-stone-950/30 sm:to-stone-950/10" />
         </div>
 
-        <div className="relative z-10 max-w-5xl mx-auto px-4 text-center space-y-8 select-none">
+        <div 
+          className="relative z-10 max-w-5xl mx-auto px-4 text-center space-y-8 select-none transition-opacity duration-1000"
+          style={{ 
+            opacity: heroImageIndex === 0 ? 1 : 0,
+            pointerEvents: heroImageIndex === 0 ? "auto" : "none"
+          }}
+        >
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}

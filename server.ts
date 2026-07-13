@@ -1,8 +1,12 @@
 import express from "express";
 import path from "path";
+import rateLimit from "express-rate-limit";
+import { adminAuthMiddleware, customerAuthMiddleware } from "./src/middleware.js";
 import fs from "fs";
 import dotenv from "dotenv";
 import bcryptjs from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { JWT_SECRET } from "./src/middleware.js";
 import { getDb } from "./src/db/index.js";
 import { runSeed } from "./src/db/seed.js";
 import * as schema from "./src/db/schema.js";
@@ -60,7 +64,13 @@ app.post("/api/upload", async (req, res) => {
 });
 
 // Simplistic robust Tokenless Admin auth endpoint for AI Studio Preview
-app.post("/api/auth/login", async (req, res) => {
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // limit each IP to 10 requests per windowMs
+  message: { success: false, error: "تعداد درخواست‌های ورود بیش از حد مجاز است. لطفا بعدا تلاش کنید." }
+});
+
+app.post("/api/auth/login", loginLimiter, async (req, res) => {
   const { username, password } = req.body;
 
   if (!username || !password) {
@@ -77,14 +87,14 @@ app.post("/api/auth/login", async (req, res) => {
       .where(eq(schema.admins.username, username))
       .limit(1);
 
-    if (found.length === 0) {
-      return res
-        .status(401)
-        .json({ success: false, error: "نام کاربری یا رمز عبور اشتباه است." });
+    let isMatched = false;
+    if (found.length > 0) {
+      const admin = found[0];
+      isMatched = await bcryptjs.compare(password, admin.password);
+    } else {
+      // Dummy compare to prevent timing attacks
+      await bcryptjs.compare(password, "$2a$12$dummyhashdummyhashdummyhashdummyhashdummyhashdummyha");
     }
-
-    const admin = found[0];
-    const isMatched = await bcryptjs.compare(password, admin.password);
 
     if (!isMatched) {
       return res
@@ -92,24 +102,29 @@ app.post("/api/auth/login", async (req, res) => {
         .json({ success: false, error: "نام کاربری یا رمز عبور اشتباه است." });
     }
 
-    // Return mock success with localized session indicator
+    const admin = found[0];
+    
+    // Generate JWT
+    const token = jwt.sign(
+      { id: admin.id, username: admin.username },
+      JWT_SECRET,
+      { expiresIn: '12h' }
+    );
+
     return res.json({
       success: true,
+      token,
       admin: {
         id: admin.id,
         username: admin.username,
+        name: "مدیر ارشد",
       },
-      token: "admin-session-token-f918903u21dwad",
     });
-  } catch (error: any) {
-    console.error("Login failure:", error);
-    return res
-      .status(500)
-      .json({ success: false, error: "خطایی در سیستم رخ داده است." });
+  } catch (err) {
+    console.error("Login Error:", err);
+    return res.status(500).json({ success: false, error: "خطای سرور" });
   }
 });
-
-// -----------------------------------------------------------------------------
 // SHOWROOMS API
 // -----------------------------------------------------------------------------
 app.get("/api/showrooms", async (req, res) => {
@@ -125,7 +140,7 @@ app.get("/api/showrooms", async (req, res) => {
   }
 });
 
-app.post("/api/showrooms", async (req, res) => {
+app.post("/api/showrooms", adminAuthMiddleware, async (req, res) => {
   const {
     name,
     city,
@@ -162,7 +177,7 @@ app.post("/api/showrooms", async (req, res) => {
   }
 });
 
-app.put("/api/showrooms/:id", async (req, res) => {
+app.put("/api/showrooms/:id", adminAuthMiddleware, async (req, res) => {
   const { id } = req.params;
   const {
     name,
@@ -197,7 +212,7 @@ app.put("/api/showrooms/:id", async (req, res) => {
   }
 });
 
-app.delete("/api/showrooms/:id", async (req, res) => {
+app.delete("/api/showrooms/:id", adminAuthMiddleware, async (req, res) => {
   const { id } = req.params;
   try {
     const db = getDb();
@@ -335,7 +350,7 @@ app.get("/api/products/:slug", async (req, res) => {
   }
 });
 
-app.post("/api/products", async (req, res) => {
+app.post("/api/products", adminAuthMiddleware, async (req, res) => {
   const {
     name,
     slug,
@@ -416,7 +431,7 @@ app.post("/api/products", async (req, res) => {
   }
 });
 
-app.put("/api/products/:id", async (req, res) => {
+app.put("/api/products/:id", adminAuthMiddleware, async (req, res) => {
   const { id } = req.params;
   const {
     name,
@@ -480,7 +495,7 @@ app.put("/api/products/:id", async (req, res) => {
   }
 });
 
-app.delete("/api/products/:id", async (req, res) => {
+app.delete("/api/products/:id", adminAuthMiddleware, async (req, res) => {
   const { id } = req.params;
   try {
     const db = getDb();
@@ -591,6 +606,8 @@ app.post("/api/orders", async (req, res) => {
 });
 
 // Admin Filtered Orders API
+app.use("/api/admin", adminAuthMiddleware);
+
 app.get("/api/admin/orders", async (req, res) => {
   const { status, showroomId, search } = req.query;
   try {
@@ -611,26 +628,34 @@ app.get("/api/admin/orders", async (req, res) => {
         schema.showrooms,
         eq(schema.orders.showroomId, schema.showrooms.id),
       )
-      .orderBy(desc(schema.orders.createdAt));
+      .$dynamic();
 
-    let list = await query;
+    const filters = [];
 
-    // Apply client filters manually in-memoriam or build conditions dynamically
     if (status && status !== "ALL") {
-      list = list.filter((o) => o.order.status === status);
+      filters.push(eq(schema.orders.status, String(status)));
     }
+    
     if (showroomId && showroomId !== "ALL") {
-      list = list.filter((o) => o.order.showroomId === showroomId);
+      filters.push(eq(schema.orders.showroomId, String(showroomId)));
     }
+    
     if (search) {
-      const searchStr = String(search).toLowerCase();
-      list = list.filter(
-        (o) =>
-          o.order.customerName.toLowerCase().includes(searchStr) ||
-          o.order.customerPhone.toLowerCase().includes(searchStr) ||
-          o.productName.toLowerCase().includes(searchStr),
+      const searchStr = `%${String(search).toLowerCase()}%`;
+      filters.push(
+        or(
+          ilike(schema.orders.customerName, searchStr),
+          ilike(schema.orders.customerPhone, searchStr),
+          ilike(schema.products.name, searchStr)
+        )
       );
     }
+    
+    if (filters.length > 0) {
+      query = query.where(and(...filters));
+    }
+
+    const list = await query.orderBy(desc(schema.orders.createdAt));
 
     return res.json({ success: true, orders: list });
   } catch (error: any) {
@@ -1070,7 +1095,13 @@ app.get("/api/admin/vip-password", async (req, res) => {
   }
 });
 
-app.post("/api/customer/vip-login", async (req, res) => {
+const vipLoginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { success: false, error: "تعداد تلاش‌ها بیش از حد مجاز است." }
+});
+
+app.post("/api/customer/vip-login", vipLoginLimiter, async (req, res) => {
   try {
     const db = getDb();
     const { password } = req.body;
@@ -1113,9 +1144,14 @@ app.post("/api/customer/vip-login", async (req, res) => {
 });
 
 // In-Memory SMS OTP Storage for Production & Testing Handshakes
-const otpStore = new Map<string, { code: string; expiresAt: number }>();
 
-app.post("/api/customer/send-otp", async (req, res) => {
+const otpLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 5, // limit each IP to 5 requests per windowMs
+  message: { success: false, error: "تعداد درخواست‌های پیامک بیش از حد مجاز است." }
+});
+
+app.post("/api/customer/send-otp", otpLimiter, async (req, res) => {
   try {
     const db = getDb();
     const { phone } = req.body;
@@ -1145,9 +1181,13 @@ app.post("/api/customer/send-otp", async (req, res) => {
     const otpCode = Math.floor(1000 + Math.random() * 9000).toString();
 
     // Store in memory with 3 minutes expiration
-    otpStore.set(cleanPhone, {
+    await db.insert(schema.otps).values({
+      phone: cleanPhone,
       code: otpCode,
-      expiresAt: Date.now() + 3 * 60 * 1000,
+      expiresAt: new Date(Date.now() + 3 * 60 * 1000)
+    }).onConflictDoUpdate({
+      target: schema.otps.phone,
+      set: { code: otpCode, expiresAt: new Date(Date.now() + 3 * 60 * 1000) }
     });
 
     console.log(
@@ -1181,7 +1221,7 @@ app.post("/api/customer/verify-otp", async (req, res) => {
     const cleanPhone = phone.trim();
     const cleanCode = code.trim();
 
-    const record = otpStore.get(cleanPhone);
+    const [record] = await db.select().from(schema.otps).where(eq(schema.otps.phone, cleanPhone)).limit(1);
     if (!record) {
       return res
         .status(400)
@@ -1192,8 +1232,8 @@ app.post("/api/customer/verify-otp", async (req, res) => {
         });
     }
 
-    if (Date.now() > record.expiresAt) {
-      otpStore.delete(cleanPhone);
+    if (new Date() > new Date(record.expiresAt)) {
+      await db.delete(schema.otps).where(eq(schema.otps.phone, cleanPhone));
       return res
         .status(400)
         .json({
@@ -1209,7 +1249,7 @@ app.post("/api/customer/verify-otp", async (req, res) => {
     }
 
     // OTP verified successfully! Delete to prevent reuse
-    otpStore.delete(cleanPhone);
+    await db.delete(schema.otps).where(eq(schema.otps.phone, cleanPhone));
 
     // Prepare full member profile payload
     const customerOrders = await db
@@ -1283,8 +1323,15 @@ app.post("/api/customer/verify-otp", async (req, res) => {
     ).length;
     const referralEarning = successfulReferrals * 250000;
 
+    const customerToken = jwt.sign(
+      { phone: cleanPhone, role: 'customer' },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
     return res.json({
       success: true,
+      token: customerToken,
       customer: {
         phone: cleanPhone,
         name: mostRecentName || "خریدار عزیز",
@@ -1307,17 +1354,12 @@ app.post("/api/customer/verify-otp", async (req, res) => {
   }
 });
 
-app.post("/api/customer/portal", async (req, res) => {
+app.post("/api/customer/portal", customerAuthMiddleware, async (req, res) => {
   try {
     const db = getDb();
-    const { phone } = req.body;
-    if (!phone) {
-      return res
-        .status(400)
-        .json({ success: false, error: "وارد کردن شماره همراه الزامی است" });
-    }
+    const cleanPhone = (req as any).customerUser.phone;
+    if (!cleanPhone) return res.status(403).json({ success: false, error: "Forbidden" });
 
-    const cleanPhone = phone.trim();
 
     // Fetch all orders for this buyer phone number
     const customerOrders = await db
@@ -1618,7 +1660,7 @@ app.post("/api/customer/link-phone", async (req, res) => {
     const cleanCode = code.trim();
 
     // Verify SMS OTP first to secure the linking procedure
-    const record = otpStore.get(cleanPhone);
+    const [record] = await db.select().from(schema.otps).where(eq(schema.otps.phone, cleanPhone)).limit(1);
     if (!record) {
       return res
         .status(400)
@@ -1629,8 +1671,8 @@ app.post("/api/customer/link-phone", async (req, res) => {
         });
     }
 
-    if (Date.now() > record.expiresAt) {
-      otpStore.delete(cleanPhone);
+    if (new Date() > new Date(record.expiresAt)) {
+      await db.delete(schema.otps).where(eq(schema.otps.phone, cleanPhone));
       return res
         .status(400)
         .json({ success: false, error: "زمان ورود کد تایید سپری شده است." });
@@ -1646,7 +1688,7 @@ app.post("/api/customer/link-phone", async (req, res) => {
     }
 
     // OTP succeeded!
-    otpStore.delete(cleanPhone);
+    await db.delete(schema.otps).where(eq(schema.otps.phone, cleanPhone));
 
     // Check if phone has any orders or leads
     const customerOrders = await db

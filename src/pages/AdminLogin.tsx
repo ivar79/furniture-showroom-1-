@@ -1,3 +1,4 @@
+import { adminFetch } from "../adminFetch";
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { KeyRound, ShieldAlert, ArrowRight, Sofa } from "lucide-react";
@@ -30,7 +31,7 @@ export default function AdminLogin() {
     }
 
     try {
-      const res = await fetch("/api/auth/login", {
+      const res = await adminFetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),

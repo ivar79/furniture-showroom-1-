@@ -1,3 +1,4 @@
+import { adminFetch } from "../adminFetch";
 import React, { useEffect, useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from "recharts";
 import { DollarSign, Wallet, ShieldCheck, Landmark, Sofa, Receipt, CreditCard, Layers } from "lucide-react";
@@ -8,7 +9,7 @@ export default function AdminCommissions() {
 
   const fetchCommissions = async () => {
     try {
-      const res = await fetch("/api/admin/commissions-report");
+      const res = await adminFetch("/api/admin/commissions-report");
       const parsed = await res.json();
       if (parsed.success) {
         setReport(parsed);

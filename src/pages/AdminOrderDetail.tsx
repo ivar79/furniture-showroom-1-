@@ -1,3 +1,4 @@
+import { adminFetch } from "../adminFetch";
 import React, { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Order, Product, Showroom, OrderStatus } from "../types";
@@ -26,7 +27,7 @@ export default function AdminOrderDetail() {
 
   const fetchOrderDetail = async () => {
     try {
-      const res = await fetch(`/api/admin/orders/${id}`);
+      const res = await adminFetch(`/api/admin/orders/${id}`);
       const parsed = await res.json();
       if (parsed.success) {
         setData(parsed.data);
@@ -68,7 +69,7 @@ export default function AdminOrderDetail() {
     setErrorMsg("");
 
     try {
-      const res = await fetch(`/api/admin/orders/${id}`, {
+      const res = await adminFetch(`/api/admin/orders/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

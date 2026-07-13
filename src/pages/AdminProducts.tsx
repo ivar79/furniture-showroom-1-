@@ -1,3 +1,4 @@
+import { adminFetch } from "../adminFetch";
 import React, { useEffect, useState } from "react";
 import { Product, Showroom, Category } from "../types";
 import { Plus, Edit2, Check, X, Sofa, Trash2, Save, Sparkles, Image, CheckSquare } from "lucide-react";
@@ -64,7 +65,7 @@ export default function AdminProducts() {
         });
 
         // Post to backend upload endpoint
-        const res = await fetch("/api/upload", {
+        const res = await adminFetch("/api/upload", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ image: base64Data, name: file.name }),
@@ -113,18 +114,18 @@ export default function AdminProducts() {
 
   const fetchData = async () => {
     try {
-      const prodRes = await fetch("/api/products");
+      const prodRes = await adminFetch("/api/products");
       const prodData = await prodRes.json();
       if (prodData.success) setProducts(prodData.products);
 
-      const catRes = await fetch("/api/categories");
+      const catRes = await adminFetch("/api/categories");
       const catData = await catRes.json();
       if (catData.success) {
         setCategories(catData.categories);
         if (catData.categories.length > 0) setCategoryId(catData.categories[0].id);
       }
 
-      const showRes = await fetch("/api/showrooms");
+      const showRes = await adminFetch("/api/showrooms");
       const showData = await showRes.json();
       if (showData.success) {
         setShowrooms(showData.showrooms);
@@ -188,7 +189,7 @@ export default function AdminProducts() {
 
   const handleDeleteToggle = async (productId: string) => {
     try {
-      const res = await fetch(`/api/products/${productId}`, { method: "DELETE" });
+      const res = await adminFetch(`/api/products/${productId}`, { method: "DELETE" });
       const parsed = await res.json();
       if (parsed.success) {
         await fetchData();
@@ -236,7 +237,7 @@ export default function AdminProducts() {
       const url = editProduct ? `/api/products/${editProduct.id}` : "/api/products";
       const method = editProduct ? "PUT" : "POST";
 
-      const res = await fetch(url, {
+      const res = await adminFetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)

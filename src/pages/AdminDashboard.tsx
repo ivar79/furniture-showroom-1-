@@ -1,3 +1,4 @@
+import { adminFetch } from "../adminFetch";
 import { useEffect, useState } from "react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { TrendingUp, ShoppingBag, Wallet, AlertCircle, Clock, CheckCircle, ArrowLeft, ArrowUpRight, Sofa, Users } from "lucide-react";
@@ -9,7 +10,7 @@ export default function AdminDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const res = await fetch("/api/admin/dashboard");
+      const res = await adminFetch("/api/admin/dashboard");
       const parsed = await res.json();
       if (parsed.success) {
         setData(parsed);

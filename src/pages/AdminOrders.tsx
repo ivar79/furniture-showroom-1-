@@ -1,3 +1,4 @@
+import { adminFetch } from "../adminFetch";
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Order, Showroom, OrderStatus } from "../types";
@@ -16,13 +17,13 @@ export default function AdminOrders() {
 
   const fetchData = async () => {
     try {
-      const res = await fetch("/api/admin/orders");
+      const res = await adminFetch("/api/admin/orders");
       const data = await res.json();
       if (data.success) {
         setOrders(data.orders);
       }
 
-      const showRes = await fetch("/api/showrooms");
+      const showRes = await adminFetch("/api/showrooms");
       const showData = await showRes.json();
       if (showData.success) {
         setShowrooms(showData.showrooms);

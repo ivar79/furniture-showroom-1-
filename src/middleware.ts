@@ -1,11 +1,12 @@
 import { Request, Response, NextFunction } from "express";
+import jwt from "jsonwebtoken";
 
-/**
- * دکوراتور هماهنگ‌کننده احراز هویت و دسترسی به پنل مدیریت
- * این میدل‌ور از دسترسی کاربران غیرمجاز به اطلاعات حساس سفارش‌ها جلوگیری می‌کند.
- */
-export function adminAuthMiddleware(req: Request, res: Response, next: NextFunction) {
-  // در محیط تست یا پروداکشن، هدر Authorization بررسی می‌شود
+export const JWT_SECRET = process.env.JWT_SECRET || "fallback_super_secret_jwt_key_please_change";
+if (!process.env.JWT_SECRET) {
+  console.warn("WARNING: JWT_SECRET is not set. Using fallback for development only.");
+}
+
+export function adminAuthMiddleware(req: Request, res: Response, next: NextFunction): any {
   const authHeader = req.headers.authorization;
   
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -17,13 +18,32 @@ export function adminAuthMiddleware(req: Request, res: Response, next: NextFunct
 
   const token = authHeader.split(" ")[1];
   
-  // توکن نمونه ثبت شده در فرانت‌اند
-  if (token !== "admin-session-token-f918903u21dwad") {
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    (req as any).adminUser = decoded;
+    next();
+  } catch (err) {
     return res.status(403).json({
       success: false,
       error: "توکن نامعتبر است یا منقضی گردیده است."
     });
   }
+}
 
-  next();
+export function customerAuthMiddleware(req: Request, res: Response, next: NextFunction): any {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ success: false, error: "دسترسی غیرمجاز." });
+  }
+  const token = authHeader.split(" ")[1];
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    if (decoded.role !== 'customer' && !decoded.username) {
+      throw new Error("Invalid role");
+    }
+    (req as any).customerUser = decoded;
+    next();
+  } catch (err) {
+    return res.status(403).json({ success: false, error: "توکن نامعتبر است." });
+  }
 }

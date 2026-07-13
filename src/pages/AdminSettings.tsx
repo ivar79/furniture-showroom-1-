@@ -1,5 +1,6 @@
+import { adminFetch } from "../adminFetch";
 import React, { useEffect, useState } from "react";
-import { Sofa, Phone, Mail, MapPin, Instagram, Send, MessageCircle, Save, CheckCircle, RefreshCw, Key, ShieldAlert, Image, LayoutTemplate } from "lucide-react";
+import { Sofa, Phone, Mail, MapPin, Instagram, Send, MessageCircle, Save, CheckCircle, RefreshCw, Key, ShieldAlert, Image, LayoutTemplate, X, Upload } from "lucide-react";
 
 export default function AdminSettings() {
   const [settings, setSettings] = useState({
@@ -32,7 +33,7 @@ export default function AdminSettings() {
   const fetchSettings = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/settings");
+      const res = await adminFetch("/api/settings");
       const data = await res.json();
       if (data.success && data.settings) {
         setSettings(data.settings);
@@ -40,7 +41,7 @@ export default function AdminSettings() {
 
       // Fetch VIP Password
       const token = localStorage.getItem("adminToken");
-      const vipRes = await fetch("/api/admin/vip-password", {
+      const vipRes = await adminFetch("/api/admin/vip-password", {
         headers: { "Authorization": `Bearer ${token}` }
       });
       const vipData = await vipRes.json();
@@ -68,7 +69,7 @@ export default function AdminSettings() {
         reader.onerror = (err) => reject(err);
         reader.readAsDataURL(file);
       });
-      const res = await fetch("/api/upload", {
+      const res = await adminFetch("/api/upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image: base64Data, name: file.name }),
@@ -130,7 +131,7 @@ export default function AdminSettings() {
 
     try {
       const token = localStorage.getItem("adminToken");
-      const res = await fetch("/api/admin/change-password", {
+      const res = await adminFetch("/api/admin/change-password", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -160,7 +161,7 @@ export default function AdminSettings() {
 
     try {
       const token = localStorage.getItem("adminToken");
-      const res = await fetch("/api/admin/vip-password", {
+      const res = await adminFetch("/api/admin/vip-password", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -201,7 +202,7 @@ export default function AdminSettings() {
 
     try {
       const token = localStorage.getItem("adminToken");
-      const res = await fetch("/api/admin/settings", {
+      const res = await adminFetch("/api/admin/settings", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -367,24 +368,34 @@ export default function AdminSettings() {
             <div className="space-y-2">
               <label className="text-[11px] font-bold text-stone-500 block flex items-center gap-1">
                 <Image className="w-3.5 h-3.5" />
-                <span>تصاویر پس‌زمینه اصلی سایت (با ویرگول انگلیسی , جدا کنید)</span>
+                <span>تصاویر پس‌زمینه اصلی سایت (گالری صفحه اصلی)</span>
               </label>
-              <div className="flex gap-2 items-start">
-                <textarea
-                  name="hero_images"
-                  rows={3}
-                  value={settings.hero_images || ""}
-                  onChange={handleChange}
-                  className="w-full text-xs font-mono border border-stone-200 p-3 rounded-xl bg-stone-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-stone-950/25 transition-all text-left leading-relaxed"
-                  placeholder="https://image1.jpg, https://image2.jpg"
-                  dir="ltr"
-                />
-                <label className="bg-stone-100 hover:bg-stone-200 text-stone-700 px-4 py-3 rounded-xl cursor-pointer text-xs font-bold transition-all whitespace-nowrap flex items-center shrink-0 h-[42px]">
-                  آپلود عکس
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-wrap gap-3 w-full">
+                  {(settings.hero_images ? settings.hero_images.split(',').map((s:string) => s.trim()).filter(Boolean) : []).map((img:string, idx:number) => (
+                    <div key={idx} className="relative group w-24 h-24 rounded-lg overflow-hidden border border-stone-200 shadow-sm">
+                      <img src={img} alt={`Hero ${idx}`} className="w-full h-full object-cover" />
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          const current = settings.hero_images ? settings.hero_images.split(',').map((s:string) => s.trim()).filter(Boolean) : [];
+                          current.splice(idx, 1);
+                          setSettings((prev:any) => ({ ...prev, hero_images: current.join(', ') }));
+                        }}
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <label className="bg-stone-100 hover:bg-stone-200 text-stone-700 px-4 py-2.5 rounded-xl cursor-pointer text-xs font-bold transition-all w-fit flex items-center shrink-0">
+                  <Upload className="w-4 h-4 ml-2" />
+                  آپلود تصویر جدید
                   <input type="file" accept="image/*" multiple onChange={handleHeroUpload} className="hidden" />
                 </label>
               </div>
-              <p className="text-[10px] text-stone-400">برای ایجاد اسلایدر چند تصویر قرار دهید. می‌توانید خودتان آپلود کنید یا آدرس درج کنید.</p>
+              <p className="text-[10px] text-stone-400">برای حذف تصاویر روی آن‌ها بروید و ضربدر را بزنید. عکس‌ها هر ۵ ثانیه تغییر خواهند کرد.</p>
             </div>
           </div>
         </div>

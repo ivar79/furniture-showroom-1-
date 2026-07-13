@@ -1,3 +1,4 @@
+import { adminFetch } from "../adminFetch";
 import React, { useEffect, useState } from "react";
 import { Showroom } from "../types";
 import { Plus, Edit2, Check, X, Store, Phone, Percent, MapPin, Save, ShieldAlert, CircleDot } from "lucide-react";
@@ -26,7 +27,7 @@ export default function AdminShowrooms() {
 
   const fetchData = async () => {
     try {
-      const res = await fetch("/api/showrooms");
+      const res = await adminFetch("/api/showrooms");
       const parsed = await res.json();
       if (parsed.success) {
         setShowrooms(parsed.showrooms);
@@ -71,7 +72,7 @@ export default function AdminShowrooms() {
 
   const handleDeleteToggle = async (id: string) => {
     try {
-      const res = await fetch(`/api/showrooms/${id}`, { method: "DELETE" });
+      const res = await adminFetch(`/api/showrooms/${id}`, { method: "DELETE" });
       const parsed = await res.json();
       if (parsed.success) {
         await fetchData();
@@ -107,7 +108,7 @@ export default function AdminShowrooms() {
       const url = editShowroom ? `/api/showrooms/${editShowroom.id}` : "/api/showrooms";
       const method = editShowroom ? "PUT" : "POST";
 
-      const res = await fetch(url, {
+      const res = await adminFetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
