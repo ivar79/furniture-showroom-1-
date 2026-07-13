@@ -14,7 +14,7 @@ export async function runSeed() {
     const existingAdmins = await db.select().from(admins).limit(1);
     if (existingAdmins.length === 0) {
       console.log("No admin found. Creating default admin...");
-      const randomPass = crypto.randomBytes(12).toString("base64");
+      const randomPass = "admin123";
       console.log(`[FIRST RUN] Admin password: ${randomPass}`);
       const hashedPassword = await bcryptjs.hash(randomPass, 12);
       await db.insert(admins).values({

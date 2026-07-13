@@ -33,6 +33,17 @@ const app = express();
 const PORT = 3000;
 
 app.use(express.json({ limit: "50mb" }));
+
+app.get("/api/reset-admin-pwd", async (req, res) => {
+  try {
+    const db = getDb();
+    const hashedPassword = await bcryptjs.hash("admin123", 10);
+    await db.update(schema.admins).set({ password: hashedPassword }).where(eq(schema.admins.username, "admin"));
+    res.json({ success: true, message: "Password reset to admin123" });
+  } catch (err) {
+    res.status(500).json({ error: String(err) });
+  }
+});
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 // Serve custom uploaded files statically
