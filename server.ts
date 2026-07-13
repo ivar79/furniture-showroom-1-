@@ -10,7 +10,7 @@ import { JWT_SECRET } from "./src/middleware.js";
 import { getDb } from "./src/db/index.js";
 import { runSeed } from "./src/db/seed.js";
 import * as schema from "./src/db/schema.js";
-import { eq, and, desc, sql, inArray, like } from "drizzle-orm";
+import { eq, and, or, ilike, desc, sql, inArray, like } from "drizzle-orm";
 
 dotenv.config();
 
@@ -633,7 +633,7 @@ app.get("/api/admin/orders", async (req, res) => {
     const filters = [];
 
     if (status && status !== "ALL") {
-      filters.push(eq(schema.orders.status, String(status)));
+      filters.push(eq(schema.orders.status, String(status) as any));
     }
     
     if (showroomId && showroomId !== "ALL") {
