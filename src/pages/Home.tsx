@@ -139,7 +139,7 @@ export default function Home() {
 
       {/* 2. Platform Features */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 sm:mt-16 text-right">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+        <div className="flex overflow-x-auto pb-6 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8 snap-x snap-mandatory" style={{ scrollbarWidth: 'none' }}>
           
           <div className="flex flex-col gap-4 p-8 bg-white border border-stone-200/50 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
             <div className="w-12 h-12 bg-stone-100 text-stone-900 flex items-center justify-center shrink-0 rounded-2xl mx-auto md:mx-0">
@@ -194,7 +194,7 @@ export default function Home() {
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="flex overflow-x-auto pb-6 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 snap-x snap-mandatory scroll-smooth" style={{ scrollbarWidth: 'none' }}>
             {[1, 2, 3].map((i) => (
               <div key={i} className="animate-pulse bg-white border border-stone-200 rounded-2xl h-[420px]" />
             ))}
@@ -202,12 +202,13 @@ export default function Home() {
         ) : featuredProducts.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {featuredProducts.map((p) => (
+              <div key={p.product.id} className="w-[85vw] sm:w-auto shrink-0 snap-center">
               <ProductCard
-                key={p.product.id}
                 product={p.product}
                 showroomName={p.showroomName}
                 categoryName={p.categoryName}
               />
+              </div>
             ))}
           </div>
         ) : (

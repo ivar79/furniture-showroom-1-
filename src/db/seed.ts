@@ -67,10 +67,10 @@ export async function runSeed() {
 
       for (const cat of cats) {
         const inserted = await db.insert(categories).values(cat).returning();
-        if (cat.slug === "sofa") sofaCategoryId = inserted[0].id;
-        if (cat.slug === "comfort-sofa") comfortSofaCategoryId = inserted[0].id;
-        if (cat.slug === "table") tableCategoryId = inserted[0].id;
-        if (cat.slug === "bedroom-set") bedroomCategoryId = inserted[0].id;
+        if (cat.slug === "sofa") sofaCategoryId = inserted[0]?.id || "";
+        if (cat.slug === "comfort-sofa") comfortSofaCategoryId = inserted[0]?.id || "";
+        if (cat.slug === "table") tableCategoryId = inserted[0]?.id || "";
+        if (cat.slug === "bedroom-set") bedroomCategoryId = inserted[0]?.id || "";
       }
       console.log("Categories seeded successfully.");
     } else {
@@ -103,7 +103,7 @@ export async function runSeed() {
           isActive: true,
         })
         .returning();
-      afraShowroomId = afra[0].id;
+      afraShowroomId = afra[0]?.id || "";
 
       const arax = await db
         .insert(showrooms)
@@ -119,7 +119,7 @@ export async function runSeed() {
           isActive: true,
         })
         .returning();
-      araxShowroomId = arax[0].id;
+      araxShowroomId = arax[0]?.id || "";
 
       console.log("Showrooms seeded successfully.");
     } else {

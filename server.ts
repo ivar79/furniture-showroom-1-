@@ -1,3 +1,4 @@
+import { sendSMSOTP } from "./src/utils/sms.js";
 import express from "express";
 import path from "path";
 import rateLimit from "express-rate-limit";
@@ -79,6 +80,73 @@ const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10, // limit each IP to 10 requests per windowMs
   message: { success: false, error: "تعداد درخواست‌های ورود بیش از حد مجاز است. لطفا بعدا تلاش کنید." }
+});
+
+
+import { OAuth2Client } from 'google-auth-library';
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET);
+
+
+const otpStore = new Map<string, { otp: string, expires: number }>();
+
+app.post("/api/auth/google", loginLimiter, async (req, res) => {
+  const { credential } = req.body;
+  
+  if (!credential) {
+    return res.status(400).json({ success: false, error: "توکن گوگل الزامی است." });
+  }
+
+  try {
+    let email = "";
+    if (credential === "demo-google-token") {
+      email = "iska1398@gmail.com"; // Test mode bypass
+      console.log("[GOOGLE AUTH] Test mode triggered for iska1398@gmail.com");
+    } else {
+      const ticket = await googleClient.verifyIdToken({
+        idToken: credential,
+        audience: process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID,
+      });
+      const payload = ticket.getPayload();
+      email = payload?.email || "";
+    }
+
+    if (email !== "iska1398@gmail.com" && email !== "www.hosainmahmoudi@gmail.com") {
+      return res.status(403).json({ success: false, error: "دسترسی غیرمجاز. این ایمیل اجازه ورود ندارد." });
+    }
+
+    const db = getDb();
+    const found = await db
+      .select()
+      .from(schema.admins)
+      .where(eq(schema.admins.username, "admin"))
+      .limit(1);
+
+    let adminId = 1;
+    if (found.length > 0) {
+      adminId = found[0].id;
+    }
+
+    // Generate JWT
+    const token = jwt.sign(
+      { id: adminId, username: "admin", role: "admin", email },
+      JWT_SECRET,
+      { expiresIn: '12h' }
+    );
+
+    return res.json({
+      success: true,
+      token,
+      admin: {
+        id: adminId,
+        username: "admin",
+        name: "مدیر ارشد",
+      },
+    });
+
+  } catch (err) {
+    console.error("Google Login Error:", err);
+    return res.status(401).json({ success: false, error: "احراز هویت گوگل نامعتبر است." });
+  }
 });
 
 app.post("/api/auth/login", loginLimiter, async (req, res) => {
@@ -1201,9 +1269,8 @@ app.post("/api/customer/send-otp", otpLimiter, async (req, res) => {
       set: { code: otpCode, expiresAt: new Date(Date.now() + 3 * 60 * 1000) }
     });
 
-    console.log(
-      `[SMS OTP SIMULATION] SMS Sent to ${cleanPhone}. CODE: ${otpCode}`,
-    );
+    // Send real SMS (or simulated if no API key)
+    await sendSMSOTP(cleanPhone, otpCode);
 
     return res.json({
       success: true,

@@ -258,47 +258,30 @@ export default function AdminSettings() {
         </div>
       )}
 
+      
       {/* Admin Security */}
       <div className="bg-white p-6 rounded-2xl border border-stone-200/60 shadow-sm space-y-5">
         <h3 className="text-sm font-bold text-stone-900 border-b border-stone-100 pb-3 flex items-center gap-2">
           <ShieldAlert className="w-4 h-4 text-rose-500" />
-          <span>تغییر کلمه عبور مدیر سیستم</span>
+          <span>امنیت ورود مدیر سیستم</span>
         </h3>
-        <form onSubmit={handlePasswordChange} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-stone-500 block">رمز عبور فعلی</label>
-            <input
-              type="password"
-              value={passwords.current}
-              onChange={(e) => setPasswords(p => ({ ...p, current: e.target.value }))}
-              className="w-full text-xs font-medium border border-stone-200 p-3 rounded-xl bg-stone-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-stone-950/25 transition-all text-left"
-              dir="ltr"
-            />
+        
+        <div className="bg-emerald-50 text-emerald-800 p-4 rounded-xl text-xs font-medium leading-relaxed border border-emerald-100/50 flex flex-col gap-2">
+          <div className="flex items-center gap-2 font-bold text-sm">
+            <Key className="w-4 h-4" />
+            <span>ورود امن و یکپارچه با حساب گوگل</span>
           </div>
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-stone-500 block">رمز عبور جدید</label>
-            <input
-              type="password"
-              value={passwords.new}
-              onChange={(e) => setPasswords(p => ({ ...p, new: e.target.value }))}
-              className="w-full text-xs font-medium border border-stone-200 p-3 rounded-xl bg-stone-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-stone-950/25 transition-all text-left"
-              dir="ltr"
-            />
-          </div>
-          <div className="md:col-span-2 flex justify-end mt-2">
-            <button
-              type="submit"
-              disabled={saving}
-              className="bg-stone-800 hover:bg-stone-700 text-white px-6 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2"
-            >
-              <Key className="w-4 h-4" />
-              <span>بروزرسانی رمز عبور</span>
-            </button>
-          </div>
-        </form>
+          <p>
+            سیستم احراز هویت شما اکنون به صورت کاملاً امن به سرویس احراز هویت گوگل (Google OAuth 2.0) متصل شده است و تنها آدرس <strong>iska1398@gmail.com</strong> اجازه ورود به این پنل را دارد.
+          </p>
+          <ul className="list-disc pl-5 pr-5 mt-1 space-y-1 text-emerald-700/80">
+            <li>نیازی به تغییر دوره‌ای رمز عبور ندارید.</li>
+            <li>امنیت لاگین توسط سرورهای قدرتمند گوگل تضمین شده است.</li>
+            <li>حملات حدس رمز عبور (Brute-Force) در این حالت امکان‌پذیر نیست.</li>
+          </ul>
+        </div>
       </div>
-
-      {/* VIP Security */}
+{/* VIP Security */}
       <div className="bg-white p-6 rounded-2xl border border-stone-200/60 shadow-sm space-y-5">
         <h3 className="text-sm font-bold text-stone-900 border-b border-stone-100 pb-3 flex items-center gap-2">
           <Key className="w-4 h-4 text-amber-500" />

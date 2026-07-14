@@ -430,7 +430,7 @@ export default function CustomerClub() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="max-w-md mx-auto bg-white dark:bg-stone-900/65 p-8 border border-stone-200 dark:border-stone-800 rounded-3xl space-y-6 shadow-xl text-center"
+              className="max-w-md mx-auto bg-white dark:bg-stone-900/65 p-6 sm:p-8 border border-stone-200 dark:border-stone-800 rounded-3xl space-y-6 shadow-xl text-center"
             >
               <div className="w-16 h-16 bg-amber-500/10 border border-amber-400/20 text-amber-500 rounded-2xl flex items-center justify-center mx-auto text-3xl font-bold">
                 <Crown />
@@ -748,7 +748,7 @@ export default function CustomerClub() {
               }`}>
                 <button
                   onClick={() => setActiveTab("TIMELINE")}
-                  className={`flex-1 py-3 text-xs font-extrabold rounded-xl transition-all ${
+                  className={`flex-1 shrink-0 px-4 py-3 text-xs font-extrabold rounded-xl transition-all ${
                     activeTab === "TIMELINE"
                       ? customerData.isVip ? "bg-amber-500 text-stone-950 shadow-md" : "bg-stone-900 text-white shadow-sm"
                       : "text-stone-400 hover:text-stone-600 dark:hover:text-stone-200"
@@ -758,7 +758,7 @@ export default function CustomerClub() {
                 </button>
                 <button
                   onClick={() => setActiveTab("PERKS")}
-                  className={`flex-1 py-3 text-xs font-extrabold rounded-xl transition-all ${
+                  className={`flex-1 shrink-0 px-4 py-3 text-xs font-extrabold rounded-xl transition-all ${
                     activeTab === "PERKS"
                       ? customerData.isVip ? "bg-amber-500 text-stone-950 shadow-md" : "bg-stone-900 text-white shadow-sm"
                       : "text-stone-400 hover:text-stone-600 dark:hover:text-stone-200"
@@ -768,7 +768,7 @@ export default function CustomerClub() {
                 </button>
                 <button
                   onClick={() => setActiveTab("SAVINGS")}
-                  className={`flex-1 py-3 text-xs font-extrabold rounded-xl transition-all ${
+                  className={`flex-1 shrink-0 px-4 py-3 text-xs font-extrabold rounded-xl transition-all ${
                     activeTab === "SAVINGS"
                       ? customerData.isVip ? "bg-amber-500 text-stone-950 shadow-md" : "bg-stone-900 text-white shadow-sm"
                       : "text-stone-400 hover:text-stone-600 dark:hover:text-stone-200"

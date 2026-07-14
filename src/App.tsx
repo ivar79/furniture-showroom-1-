@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation, useNavigate } from "react-router-dom";
 import Navbar from "./components/Navbar";
+import BottomNav from "./components/BottomNav";
 import Footer from "./components/Footer";
 import { AnimatePresence } from "motion/react";
 
@@ -52,7 +53,7 @@ function MainLayout() {
   return (
     <div className="bg-stone-50 min-h-screen text-stone-900 font-sans selection:bg-stone-900 selection:text-stone-50 flex flex-col justify-between">
       {!isLoginPage && <Navbar />}
-      <main className="flex-grow">
+      <main className="flex-grow pb-20 lg:pb-0">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/products" element={<Products />} />
@@ -66,6 +67,7 @@ function MainLayout() {
         </Routes>
       </main>
       {!isLoginPage && <Footer />}
+      {!isLoginPage && <BottomNav />}
     </div>
   );
 }

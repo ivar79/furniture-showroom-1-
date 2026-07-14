@@ -193,7 +193,7 @@ export default function Navbar() {
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="lg:hidden overflow-hidden bg-stone-50 border-b border-stone-200 shadow-2xl"
+            className="lg:hidden overflow-hidden bg-stone-50 border-b border-stone-200 shadow-2xl absolute top-full left-0 right-0 z-50 rounded-b-3xl max-h-[calc(100vh-80px)] overflow-y-auto"
           >
             <div className="px-6 py-8 space-y-8 flex flex-col">
               {!isAdmin ? (
